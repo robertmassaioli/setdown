@@ -15,23 +15,24 @@ $ident = [a-zA-Z0-9\-\_]
 tokens :-
 
    $white+           ;
-   "/\"              { const And }
-   "\/"              { const Or }
-   "-"               { const Difference }
-   [\"]              { const Quote }
-   \"$nonFilename+\" { Filename . TL.init . TL.tail . TLE.decodeUtf8 }
-   $ident+$white*":" { IdentifierDefinition . TL.strip . TL.init . TLE.decodeUtf8 }
-   $ident+           { Identifier . TLE.decodeUtf8 }
+   "("               { const LParenTok }
+   ")"               { const RParenTok }
+   "/\"              { const AndTok }
+   "\/"              { const OrTok }
+   "-"               { const DifferenceTok }
+   \"[^\"]+\"        { FilenameTok . TL.unpack . TL.init . TL.tail . TLE.decodeUtf8 }
+   $ident+$white*":" { IdentifierDefinitionTok . TL.strip . TL.init . TLE.decodeUtf8 }
+   $ident+           { IdentifierTok . TLE.decodeUtf8 }
 
 {
-data Token 
-   = Filename TL.Text
-   | IdentifierDefinition TL.Text
-   | Identifier TL.Text
-   | Colon
-   | And
-   | Or
-   | Difference
-   | Quote
+data SetToken 
+   = FilenameTok FilePath
+   | IdentifierDefinitionTok TL.Text
+   | IdentifierTok TL.Text
+   | AndTok
+   | OrTok
+   | DifferenceTok
+   | LParenTok
+   | RParenTok
    deriving(Show, Eq)
 }

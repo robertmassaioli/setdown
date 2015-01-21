@@ -1,5 +1,7 @@
-A: "file.out" /\ "b.out"
+A: "a-1.out" /\ "a-2.out"
 
-B: A \/ "c.out"
+B: "b-11.out" \/ "b.out"
 
-C : A - B
+C : (A - B) \/ "c.out"
+
+D : C
