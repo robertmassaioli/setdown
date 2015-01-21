@@ -1,0 +1,5 @@
+A: "file.out" /\ "b.out"
+
+B: A \/ "c.out"
+
+C : A - B
