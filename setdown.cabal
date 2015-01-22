@@ -64,6 +64,8 @@ executable setdown
                        , bytestring == 0.10.4.*
                        , text == 1.2.*
                        , pretty-show == 1.6.*
+                       -- Module Dependencies
+                       , containers == 0.5.*
   
   -- Directories containing source files.
   -- hs-source-dirs:      
