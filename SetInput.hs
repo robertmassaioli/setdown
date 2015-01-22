@@ -8,7 +8,7 @@ import qualified Data.ByteString.Lazy as BL
 import qualified SetLanguage as SL
 import qualified SetParser as SP
 
-parse :: BL.ByteString -> [Definition]
+parse :: BL.ByteString -> Definitions
 parse = fmap fromParserDefinition . SP.parseSetLanguage . SL.alexScanTokens
 
 fromParserDefinition :: SP.Definition -> Definition
@@ -21,6 +21,6 @@ fromParserExpression (SP.FilenameExp filename) = FileExpression filename
 fromParserExpression (SP.IdentifierExp (SP.Identifier name)) = IdentifierExpression name
 
 fromParserOperator :: SP.SetOperator -> Operator
-fromParserOperator SP.AndOp = And
-fromParserOperator SP.OrOp = Or
+fromParserOperator SP.IntersectionOp = And
+fromParserOperator SP.UnionOp = Or
 fromParserOperator SP.DifferenceOp = Difference

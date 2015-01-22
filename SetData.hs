@@ -1,10 +1,14 @@
 module SetData 
-   ( Definition(..)
+   ( Definitions
+   , Definition(..)
    , Expression(..)
    , Operator(..)
+   , Identifier
    ) where
 
 import qualified Data.Text.Lazy as TL
+
+type Definitions = [Definition]
 
 data Definition = Definition
    { definitionId :: Identifier

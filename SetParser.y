@@ -3,6 +3,9 @@ module SetParser where
 
 import SetLanguage
 import qualified Data.Text.Lazy as TL
+-- TODO add precidence of operators
+-- TODO add comments to the language
+-- TODO The tokens should come with line number information so that we can better pinpoint errors.
 }
 
 %name parseSetLanguage
@@ -12,8 +15,8 @@ import qualified Data.Text.Lazy as TL
 %token
    '('            { LParenTok }
    ')'            { RParenTok }
-   and            { AndTok }
-   or             { OrTok }
+   and            { IntersectionTok }
+   or             { UnionTok }
    diff           { DifferenceTok }
    identifierDef  { IdentifierDefinitionTok $$ }
    identifier     { IdentifierTok $$ }
@@ -26,22 +29,29 @@ definitions : definition               { [$1] }
 
 definition : identifierDef exp         { Definition (Identifier $1) $2 }
 
-exp : exp operator exp       { BinaryExp $2 $1 $3 }
-    | '(' exp ')'            { BrackExp $2 }
-    | filename               { FilenameExp $1 }
-    | identifier             { IdentifierExp (Identifier $1) }
+exp : baseexp                          { $1 }
+    | brackexp                         { $1 }
+    | baseorbrack operator baseorbrack { BinaryExp $2 $1 $3 }
 
-operator : and    { AndOp }
-         | or     { OrOp }
+baseorbrack : baseexp        { $1 }
+            | brackexp       { $1 }
+
+brackexp : '(' exp ')'       { BrackExp $2 }
+
+baseexp : filename           { FilenameExp $1 }
+        | identifier         { IdentifierExp (Identifier $1) }
+
+operator : and    { IntersectionOp }
+         | or     { UnionOp }
          | diff   { DifferenceOp }
 
 {
 parseError :: [SetToken] -> a
-parseError _ = error "Parse error"
+parseError tokens = error $ "Parse error: " ++ show tokens
 
 data SetOperator 
-   = AndOp
-   | OrOp
+   = IntersectionOp
+   | UnionOp
    | DifferenceOp
    deriving(Show, Eq)
 

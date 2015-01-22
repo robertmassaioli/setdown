@@ -1,7 +1,14 @@
+-- Part A is pretty important
+-- it starts us off
 A: "a-1.out" /\ "a-2.out"
 
+-- Part B is equally important, it contains interesting operations
 B: "b-11.out" \/ "b.out"
 
-C : (A - B) \/ "c.out"
+C : (A - B) \/ ("c.out" \/ D)
+
+precidence: (A /\ (B /\ C)) \/ D
 
 D : C
+
+D : Z

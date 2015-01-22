@@ -15,22 +15,25 @@ $ident = [a-zA-Z0-9\-\_]
 tokens :-
 
    $white+           ;
+   "--".*            ;
    "("               { const LParenTok }
    ")"               { const RParenTok }
-   "/\"              { const AndTok }
-   "\/"              { const OrTok }
+   "/\"              { const IntersectionTok }
+   "\/"              { const UnionTok }
+   "∪"               { const IntersectionTok }
+   "∩"               { const UnionTok }
    "-"               { const DifferenceTok }
    \"[^\"]+\"        { FilenameTok . TL.unpack . TL.init . TL.tail . TLE.decodeUtf8 }
    $ident+$white*":" { IdentifierDefinitionTok . TL.strip . TL.init . TLE.decodeUtf8 }
    $ident+           { IdentifierTok . TLE.decodeUtf8 }
 
 {
-data SetToken 
+data SetToken
    = FilenameTok FilePath
    | IdentifierDefinitionTok TL.Text
    | IdentifierTok TL.Text
-   | AndTok
-   | OrTok
+   | IntersectionTok
+   | UnionTok
    | DifferenceTok
    | LParenTok
    | RParenTok
