@@ -3,10 +3,10 @@
 A: "a-1.out" /\ "a-2.out"
 
 -- Part B is equally important, it contains interesting operations
-B: "b-1.out" \/ "b-2.out"
+B: "b-2.out" \/ "b-1.out"
 
-C : (A - B) \/ "c-1.out"
+C : (B - A) \/ "c-1.out"
 
-precidence: A /\ (B /\ C)
+precidence: A /\ (C /\ B)
 
 1 : "a-1.out"

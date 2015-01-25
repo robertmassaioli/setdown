@@ -20,6 +20,8 @@ import PrintDefinition
 import ExpressionConversion
 import DefinitionHelpers
 
+import DuplicateElimination
+
 prettyPrint :: Show a => a -> IO ()
 prettyPrint = putStrLn . ppShow
 
@@ -32,7 +34,7 @@ main = do
    setData <- fmap parse B.getContents
    prettyPrint setData
    printDefinitions setData
-   let simpleSetData = complexToSimpleDefinitions setData
+   let simpleSetData = orderDefinitions $ complexToSimpleDefinitions setData
    prettyPrint simpleSetData
    printSimpleDefinitions simpleSetData
    -- Step 0: Verify that the definitions are well defined and that the referenced files exist
