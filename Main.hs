@@ -21,6 +21,7 @@ import ExpressionConversion
 import DefinitionHelpers
 
 import DuplicateElimination
+import PerformOperations
 
 prettyPrint :: Show a => a -> IO ()
 prettyPrint = putStrLn . ppShow
@@ -67,6 +68,8 @@ main = do
    -- docs to that library if at all possible)
    sortedFiles <- extractAndSortFiles context (S.toList . extractFilenamesFromDefinitions $ setData)
    prettyPrint sortedFiles
+   computedFiles <- runSimpleDefinitions simpleSetDataWithoutDuplicates sortedFiles
+   prettyPrint computedFiles
  
    -- Step 2: Calculate the graph of everything that needs to be computed and compute things one at
    -- a time. Even make sure that you store the temporary results along the way. That way we can
@@ -76,48 +79,3 @@ main = do
    
    -- Step 3: Print out the final statistics with the defitions pointing to how many elements that
    -- each contained and where to find their output files.
-
-fileSetOperation :: Context -> Operator -> FilePath -> FilePath -> IO FilePath
-fileSetOperation ctx ot leftFp rightFp = do
-   leftContents <- T.lines <$> T.readFile leftFp 
-   rightContents <- T.lines <$> T.readFile rightFp 
-   let mergedContents = linesSetOperation (operatorTools ot) leftContents rightContents 
-   randomFilename <- randomFilenameInOutput ctx
-   T.writeFile randomFilename . T.unlines $ mergedContents
-   return randomFilename
-   
-randomFilenameInOutput :: Context -> IO FilePath
-randomFilenameInOutput ctx = inOutput ctx . show <$> UUID.nextRandom
-
-linesSetOperation :: OperatorTools T.Text -> [T.Text] -> [T.Text] -> [T.Text]
-linesSetOperation ot = go
-   where 
-      go :: [T.Text] -> [T.Text] -> [T.Text]
-      go [] [] = []
-      go xs [] = if otKeepRemainderRight ot then xs else []
-      go [] xs = if otKeepRemainderLeft ot then xs else []
-      go ol@(l:ls) or@(r:rs) = 
-         if (otCompare ot) l r 
-            then chosen : go (dropWhileChosen ol) (dropWhileChosen or)
-            else if l < r
-               then go ls or
-               else go ol rs
-         where
-            chosen = (otChoose ot) l r
-            dropWhileChosen = dropWhile (== chosen)
-      
-
-data (Eq a, Ord a) => OperatorTools a = OT
-   { otCompare :: a -> a -> Bool
-   , otChoose  :: a -> a -> a
-   , otKeepRemainderLeft :: Bool
-   , otKeepRemainderRight :: Bool
-   } 
-
-operatorTools :: Ord a => Operator -> OperatorTools a
-operatorTools And          = OT (==)            const False False -- fst or snd, it does not matter they are equal
-operatorTools Or           = OT (const2 True)   min True True
-operatorTools Difference   = OT (<)             const True False 
-
-const2 :: a -> b -> c -> a
-const2 = const . const
