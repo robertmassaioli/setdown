@@ -1,4 +1,8 @@
-module ExternalSort where
+module ExternalSort 
+   ( extractAndSortFiles 
+   , extractAndSortFile 
+   , splitSortAndMerge
+   ) where
 
 import Data.List (sort, groupBy)
 import Data.Int
@@ -13,11 +17,13 @@ import qualified Data.Text.Lazy.IO as T
 
 import Context
 
-extractAndSortFiles :: [FilePath] -> IO [(FilePath, FilePath)]
-extractAndSortFiles = undefined
+extractAndSortFiles :: Context -> [FilePath] -> IO [(FilePath, FilePath)]
+extractAndSortFiles ctx fps = mapM (extractAndSortFile ctx) fps
 
-extractAndSortFile :: FilePath -> IO (FilePath, FilePath)
-extractAndSortFile = undefined
+extractAndSortFile :: Context -> FilePath -> IO (FilePath, FilePath)
+extractAndSortFile ctx fp = do
+   resultFile <- splitSortAndMerge ctx fp
+   return (fp, resultFile)
 
 splitSortAndMerge :: Context -> FilePath -> IO FilePath
 splitSortAndMerge ctx fp = mergeFiles ctx =<< splitAndSort ctx fp
