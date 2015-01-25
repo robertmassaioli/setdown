@@ -126,13 +126,17 @@ mergeFiles :: Context -> [FilePath] -> IO FilePath
 mergeFiles _ [] = error "Tried to merge no files..."
 mergeFiles _ [f] = return f -- TODO rename to something sensible
 mergeFiles ctx fps = do
-   fileContents <- fmap (fmap T.lines) $ mapM T.readFile fps
-   let mergeGroups = chunksOf (cFilesPerMerge ctx) fileContents
-   mergedFiles <- forM mergeGroups $ \group -> do 
-      randomFilename <- fmap show UUID.nextRandom
-      writeFileLines (cOutputDir ctx </> randomFilename) . merge $ group
-      return randomFilename
+   let mergeFilepaths = chunksOf (cFilesPerMerge ctx) fps -- [[FilePath]]
+   mergedFiles <- forM mergeFilepaths (directMergeFiles ctx)
    mergeFiles ctx mergedFiles
+
+directMergeFiles :: Context -> [FilePath] -> IO FilePath
+directMergeFiles ctx fps = do
+   fileContents <- fmap (fmap T.lines) $ mapM T.readFile fps
+   randomFilename <- fmap show UUID.nextRandom
+   let newFile = cOutputDir ctx </> randomFilename
+   writeFileLines newFile . merge $ fileContents
+   return newFile
 
 writeFileLines :: FilePath -> [T.Text] -> IO ()
 writeFileLines f = T.writeFile f . T.unlines
