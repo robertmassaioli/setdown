@@ -3,9 +3,11 @@ module Context
    , standardContext
    , smallContext
    , prepareContext
+   , inOutput
    ) where
 
 import Data.Int
+import System.FilePath ((</>))
 import System.Directory (createDirectoryIfMissing)
 
 data Context = Context 
@@ -26,3 +28,6 @@ standardContext = Context
 
 prepareContext :: Context -> IO ()
 prepareContext ctx = createDirectoryIfMissing True (cOutputDir ctx)
+
+inOutput :: Context -> FilePath -> FilePath
+inOutput ctx fp = cOutputDir ctx </> fp

@@ -4,6 +4,10 @@ module SetData
    , Expression(..)
    , Operator(..)
    , Identifier
+   , SimpleDefinitions
+   , SimpleDefinition(..)
+   , SimpleExpression(..)
+   , BaseExpression(..)
    ) where
 
 import qualified Data.Text.Lazy as TL
@@ -19,7 +23,7 @@ data Operator
    = And
    | Or
    | Difference
-   deriving (Eq, Show)
+   deriving (Eq, Ord, Show)
 
 data Expression
    = BinaryExpression Operator Expression Expression
@@ -28,3 +32,21 @@ data Expression
    deriving (Eq, Show)
 
 type Identifier = TL.Text
+
+type SimpleDefinitions = [SimpleDefinition]
+
+data SimpleDefinition = SimpleDefinition
+   { sdId :: Identifier
+   , sdExpression :: SimpleExpression
+   } deriving (Eq, Ord, Show)
+
+data SimpleExpression 
+   = SimpleBinaryExpression Operator BaseExpression BaseExpression
+   | SimpleUnaryExpression BaseExpression
+   deriving (Eq, Ord, Show)
+
+data BaseExpression
+   = BaseFileExpression FilePath
+   | BaseIdentifierExpression Identifier
+   deriving (Eq, Ord, Show)
+

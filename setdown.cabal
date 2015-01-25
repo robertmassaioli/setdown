@@ -70,6 +70,7 @@ executable setdown
                        , split == 0.2.*
                        , filepath
                        , directory == 1.2.*
+                       , mtl == 2.2.*
   
   -- Directories containing source files.
   -- hs-source-dirs:      
