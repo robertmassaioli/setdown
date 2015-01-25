@@ -9,4 +9,4 @@ C : (A - B) \/ "c-1.out"
 
 precidence: A /\ (B /\ C)
 
-1: "a-1.out"
+1 : "a-1.out"

@@ -38,7 +38,7 @@ printSimpleDefinitions :: SimpleDefinitions -> IO ()
 printSimpleDefinitions = sequence_ . intersperse printNewline . fmap printSimpleDefinition
 
 printSimpleDefinition :: SimpleDefinition -> IO ()
-printSimpleDefinition (SimpleDefinition id se) = do
+printSimpleDefinition (SimpleDefinition id se _) = do
    printId id
    putStr ": "
    printSimpleExpression se

@@ -33,7 +33,7 @@ fromDefinitions defs = do
 fromDefinition :: Definition -> ConvState SimpleDefinitions
 fromDefinition (Definition id expression) = do 
    (exp, conv) <- convertExpression expression
-   return $ SimpleDefinition id exp : conv
+   return $ SimpleDefinition id exp True : conv
 
 convertExpression :: Expression -> ConvState (SimpleExpression, SimpleDefinitions)
 convertExpression (IdentifierExpression ident) = return (SimpleUnaryExpression (BaseIdentifierExpression ident), [])
@@ -49,7 +49,7 @@ defFromExpression :: SimpleExpression -> ConvState (BaseExpression, Maybe Simple
 defFromExpression (SimpleUnaryExpression be) = return (be, Nothing)
 defFromExpression se@(SimpleBinaryExpression {}) = do
    defId <- getIdThenIncrement
-   let newDef = SimpleDefinition defId se
+   let newDef = SimpleDefinition defId se False
    return (BaseIdentifierExpression defId, Just newDef)
 
 getIdThenIncrement :: ConvState Identifier

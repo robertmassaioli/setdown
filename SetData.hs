@@ -38,6 +38,7 @@ type SimpleDefinitions = [SimpleDefinition]
 data SimpleDefinition = SimpleDefinition
    { sdId :: Identifier
    , sdExpression :: SimpleExpression
+   , sdRetain :: Bool -- This is true if this is a definition that must be maintained
    } deriving (Eq, Ord, Show)
 
 data SimpleExpression 
