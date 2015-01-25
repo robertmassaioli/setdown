@@ -24,4 +24,4 @@ unknownIdentifier defs = fmap message (S.toList nonDefinedIds)
 
       nonDefinedIds = usedIds S.\\ definitionIds
       usedIds = extractIdsFromDefinitions defs
-      definitionIds = S.fromList . fmap definitionId $ defs
+      definitionIds = extractDefinedIds defs
