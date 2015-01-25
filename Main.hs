@@ -18,6 +18,7 @@ import Context
 import ExternalSort
 import PrintDefinition
 import ExpressionConversion
+import DefinitionHelpers
 
 prettyPrint :: Show a => a -> IO ()
 prettyPrint = putStrLn . ppShow
@@ -33,6 +34,7 @@ main = do
    printDefinitions setData
    let simpleSetData = complexToSimpleDefinitions setData
    prettyPrint simpleSetData
+   printSimpleDefinitions simpleSetData
    -- Step 0: Verify that the definitions are well defined and that the referenced files exist
    -- relative to the file that we pass in.
    putStrLn "==> Verification (Ensuring correctness in the set description file)"

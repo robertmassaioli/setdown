@@ -1,9 +1,10 @@
 module SetInputVerification where 
 
-import SetData
 import qualified Data.Text.Lazy as TL
 import Data.List
 import qualified Data.Set as S
+import SetData
+import DefinitionHelpers
 
 -- TODO these functions should generate potential lists of error messages
 
@@ -24,19 +25,3 @@ unknownIdentifier defs = fmap message (S.toList nonDefinedIds)
       nonDefinedIds = usedIds S.\\ definitionIds
       usedIds = extractIdsFromDefinitions defs
       definitionIds = S.fromList . fmap definitionId $ defs
-
-extractIdsFromExpression :: Expression -> S.Set Identifier
-extractIdsFromExpression (BinaryExpression _ a b) = extractIdsFromExpression a `S.union` extractIdsFromExpression b
-extractIdsFromExpression (FileExpression _) = S.empty
-extractIdsFromExpression (IdentifierExpression i) = S.singleton i
-
-extractIdsFromDefinitions :: Definitions -> S.Set Identifier
-extractIdsFromDefinitions = foldr S.union S.empty . fmap (extractIdsFromExpression . definitionExpression)
-
-extractFilenamesFromExpression :: Expression -> S.Set FilePath
-extractFilenamesFromExpression (BinaryExpression _ a b) = extractFilenamesFromExpression a `S.union` extractFilenamesFromExpression b
-extractFilenamesFromExpression (FileExpression fn) = S.singleton fn
-extractFilenamesFromExpression (IdentifierExpression _) = S.empty
-
-extractFilenamesFromDefinitions :: Definitions -> S.Set FilePath
-extractFilenamesFromDefinitions = foldr S.union S.empty . fmap (extractFilenamesFromExpression . definitionExpression)

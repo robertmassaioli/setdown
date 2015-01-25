@@ -8,3 +8,5 @@ B: "b-1.out" \/ "b-2.out"
 C : (A - B) \/ "c-1.out"
 
 precidence: A /\ (B /\ C)
+
+1: "a-1.out"
