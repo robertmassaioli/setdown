@@ -32,11 +32,14 @@ prettyPrint = putStrLn . ppShow
 -- - The output directory. By default this should be 'set-output'
 main = do
    setData <- fmap parse B.getContents
-   prettyPrint setData
-   printDefinitions setData
    let simpleSetData = orderDefinitions $ complexToSimpleDefinitions setData
-   prettyPrint simpleSetData
+   let simpleSetDataWithoutDuplicates = eliminateDuplicates simpleSetData
+   putStrLn "Original definitions:"
+   printDefinitions setData
+   putStrLn "Simplified with potential duplicates:"
    printSimpleDefinitions simpleSetData
+   putStrLn "Simplified without duplicates:"
+   printSimpleDefinitions simpleSetDataWithoutDuplicates
    -- Step 0: Verify that the definitions are well defined and that the referenced files exist
    -- relative to the file that we pass in.
    putStrLn "==> Verification (Ensuring correctness in the set description file)"
