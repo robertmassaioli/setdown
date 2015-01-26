@@ -1,6 +1,6 @@
 # Setdown - Line based set manipulation
 
-Author: [Robert Massaioli][6]
+Author: [Robert Massaioli][6]  
 Created in: 2015  
 
 ## What is setdown and how does it work?
