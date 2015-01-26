@@ -28,7 +28,11 @@ import SimpleDefinitionCycles
 import System.Directory (doesFileExist)
 import System.FilePath (dropFileName, (</>))
 
-import Text.Show.Pretty
+-- Useful for Print Debugging
+-- import Text.Show.Pretty
+-- prettyPrint :: Show a => a -> IO ()
+-- prettyPrint = putStrLn . ppShow
+
 
 data Options = Options
    { outputDirectory :: Maybe FilePath
@@ -49,9 +53,6 @@ options = Options
    }
    &= program "setdown"
    &= summary "setdown allows you to perform set operations on multiple files efficiently using an intuitive language."
-
-prettyPrint :: Show a => a -> IO ()
-prettyPrint = putStrLn . ppShow
 
 -- TODO the setdownFile should be optional, at which point we should search the current directory
 -- for one
