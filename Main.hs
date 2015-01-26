@@ -115,13 +115,17 @@ main = do
    printSimpleDefinitions simpleSetData
    printNewline
 
+   putStr "==> Checking for cycles in the simplified definitions..."
    let cycles = getCyclesInSimpleDefinitions simpleSetData
+   putStrLn "DONE:"
    unless (null cycles) $ do
-      putStrLn "Error: found cyclic dependencies in the definitions!"
+      putStrLn "[Error 20] found cyclic dependencies in the definitions!"
       printNewline
       putStrLn "We found the following cycles:"
       printCycles cycles
-      exitWith (ExitFailure 14)
+      exitWith (ExitFailure 20)
+   putStrLn "OK: No cycles were found in the definitions."
+   printNewline
 
    putStrLn "==> Copying and Sorting all input files from the definitions..."
    -- Step 1: For every unique file, sort it (Use external sort for this purpose:
