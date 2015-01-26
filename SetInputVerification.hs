@@ -25,3 +25,6 @@ unknownIdentifier defs = fmap message (S.toList nonDefinedIds)
       nonDefinedIds = usedIds S.\\ definitionIds
       usedIds = extractIdsFromDefinitions defs
       definitionIds = extractDefinedIds defs
+
+-- TODO add a function that searches through the list of files in the definition and returns an
+-- error for all of the files that do not exist

@@ -59,7 +59,7 @@ main = do
 
    putStr "==> Simplifying and eliminating duplicates from set definitions..."
    let simpleSetData = eliminateDuplicates . orderDefinitions . complexToSimpleDefinitions $ setData
-   putStrLn "Done:"
+   putStrLn "DONE:"
    printSimpleDefinitions simpleSetData
    printNewline
 

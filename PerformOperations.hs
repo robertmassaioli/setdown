@@ -110,18 +110,6 @@ data (Eq a, Ord a) => OperatorTools a = OT
    , otKeepRemainderRight :: Bool
    } 
 
-{-
-a a
-b b
-e c
-f d
-  e
-  g
-
-a a
--}
-
-
 operatorTools :: Ord a => Operator -> OperatorTools a
 operatorTools And          = OT (==)            const False False -- fst or snd, it does not matter they are equal
 operatorTools Or           = OT (const2 True)   min True True
