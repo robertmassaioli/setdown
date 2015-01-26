@@ -17,7 +17,7 @@ data TransitionState = TS
 type ConvState = State TransitionState
 
 complexToSimpleDefinitions :: Definitions -> SimpleDefinitions
-complexToSimpleDefinitions defs = fst $ runState (fromDefinitions defs) initialState
+complexToSimpleDefinitions defs = evalState (fromDefinitions defs) initialState
    where
       initialState = TS 
          { tsCount = 0
@@ -62,7 +62,7 @@ withId :: Integer -> (Integer, Identifier)
 withId x = (x, integerToId x)
 
 thisAndFurther :: Integer -> [Integer]
-thisAndFurther x = iterate (+1) x
+thisAndFurther = iterate (+1)
 
 integerToId :: Integer -> Identifier
 integerToId = T.pack . show

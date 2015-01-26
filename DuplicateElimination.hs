@@ -6,10 +6,11 @@ module DuplicateElimination
 import SetData
 import Data.Ord (comparing)
 import Data.List (sort, sortBy, groupBy, partition)
+import Data.Function (on)
 import qualified Data.Set as S
 
 eliminateDuplicates :: SimpleDefinitions -> SimpleDefinitions 
-eliminateDuplicates sds = sort . (flip updateWithDuplicates sds) $ findDuplicates sds
+eliminateDuplicates sds = sort . flip updateWithDuplicates sds $ findDuplicates sds
 
 updateWithDuplicates :: [Duplicates] -> SimpleDefinitions -> SimpleDefinitions
 updateWithDuplicates ds sds = S.toList $ foldr updateWithDuplicate (S.fromList sds) ds
@@ -26,9 +27,9 @@ updateWithDuplicate (Duplicates [] []) sds = sds
 updateWithDuplicate dupes sds = S.insert retainDupe cleanedDefs
    where
       cleanedDefs = S.map (replaceIds newId oldIds) remainingDefs
-      remainingDefs = sds S.\\ (S.fromList discardDupes)
+      remainingDefs = sds S.\\ S.fromList discardDupes
       newId = sdId retainDupe
-      oldIds = S.fromList $ fmap sdId discardDupes
+      oldIds = S.fromList . fmap sdId $ discardDupes
       (retainDupe : discardDupes) = dupRetain dupes ++ dupDiscontinue dupes
 
 replaceIds :: Identifier -> S.Set Identifier -> SimpleDefinition -> SimpleDefinition
@@ -45,7 +46,7 @@ replaceIdsInBaseExpression _ _ be@(BaseFileExpression {}) = be
 replaceIdsInBaseExpression newId oldIds be@(BaseIdentifierExpression ident) = if ident `S.member` oldIds then BaseIdentifierExpression newId else be
 
 findDuplicates :: SimpleDefinitions -> [Duplicates]
-findDuplicates = fmap toDuplicates . filter (\x -> length x > 1) . groupBy (\x y -> sdExpression x == sdExpression y) 
+findDuplicates = fmap toDuplicates . filter (\x -> length x > 1) . groupBy ((==) `on` sdExpression) 
 
 toDuplicates :: SimpleDefinitions -> Duplicates
 toDuplicates = uncurry Duplicates . partition sdRetain

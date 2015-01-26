@@ -81,5 +81,5 @@ printNewline = putStrLn ""
 
 -- TODO Move this out to a utility class
 isBinaryExpression :: Expression -> Bool
-isBinaryExpression (BinaryExpression _ _ _) = True
+isBinaryExpression (BinaryExpression {}) = True
 isBinaryExpression _ = False

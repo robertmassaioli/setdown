@@ -39,8 +39,7 @@ options = Options
       &= typDir 
       &= help "The directory in which to place the output contents. Relative to your .setdown file." 
       &= opt "output" 
-   } 
-   { setdownFile = def
+   , setdownFile = def
       &= typ "definitions.setdown"
       &= argPos 0
    }

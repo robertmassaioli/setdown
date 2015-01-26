@@ -12,13 +12,14 @@ import Data.List.Split (chunksOf)
 import Control.Monad (forM)
 import System.FilePath ((</>))
 import Control.Arrow (second)
+import Control.Applicative
 import qualified Data.Text.Lazy as T
 import qualified Data.Text.Lazy.IO as T
 
 import Context
 
 extractAndSortFiles :: Context -> [FilePath] -> IO [(FilePath, FilePath)]
-extractAndSortFiles ctx fps = mapM (extractAndSortFile ctx) fps
+extractAndSortFiles ctx = mapM (extractAndSortFile ctx)
 
 extractAndSortFile :: Context -> FilePath -> IO (FilePath, FilePath)
 extractAndSortFile ctx fp = do
@@ -62,7 +63,7 @@ splitFile ctx inputFile = do
    sequence_ . fmap (uncurry T.writeFile) $ namesAndContents
    return . fmap fst $ namesAndContents
    where
-      names = zipWith (\a b -> cOutputDir ctx </> a ++ "." ++ show b ++ ".split") (repeat inputFile) [(1 :: Integer)..]
+      names = map (\num -> cOutputDir ctx </> inputFile ++ "." ++ show num ++ ".split") [(1 :: Integer)..]
 
 mergeFiles :: Context -> [FilePath] -> IO FilePath
 mergeFiles _ [] = error "Tried to merge no files..."
@@ -74,7 +75,7 @@ mergeFiles ctx fps = do
 
 directMergeFiles :: Context -> [FilePath] -> IO FilePath
 directMergeFiles ctx fps = do
-   fileContents <- fmap (fmap T.lines) $ mapM T.readFile fps
+   fileContents <- fmap T.lines <$> mapM T.readFile fps
    randomFilename <- fmap show UUID.nextRandom
    let newFile = cOutputDir ctx </> randomFilename
    writeFileLines newFile . merge $ fileContents
