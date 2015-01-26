@@ -26,10 +26,6 @@ description:         There will be times when you have lots of set data and you 
 homepage:            http://bitbucket.org/robertmassaioli/setdown
 bug-reports:         https://bitbucket.org/robertmassaioli/setdown/issues
 
-source-repository head
-   type: git
-   location: git@bitbucket.org:robertmassaioli/setdown.git
-
 -- The license under which the package is released.
 license:             BSD3
 
@@ -57,6 +53,9 @@ extra-source-files:  README.markdown
 -- Constraint on the version of Cabal needed to build this package.
 cabal-version:       >=1.10
 
+source-repository head
+   type: git
+   location: git@bitbucket.org:robertmassaioli/setdown.git
 
 executable setdown
   -- .hs or .lhs file containing the Main module.
