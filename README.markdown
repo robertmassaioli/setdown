@@ -3,6 +3,15 @@
 Author: [Robert Massaioli][6]  
 Created in: 2015  
 
+## Installation Steps
+
+If you just want to install setdown then you just need to make sure that you have Haskell and Cabal
+installed and then:
+
+    cabal install setdown
+
+This works because [setdown is on hackage][7]!
+
 ## What is setdown and how does it work?
 
 Setdown is a command line tool for line based set operations. To use setdown you write a "setdown
@@ -151,3 +160,4 @@ process just follow it because it is designed to make your life, and my life, ea
  [4]: https://www.haskell.org/platform/
  [5]: https://www.haskell.org/cabal/
  [6]: https://robertmassaioli.wordpress.com/
+ [7]: http://hackage.haskell.org/package/setdown
