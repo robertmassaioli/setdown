@@ -1,12 +1,12 @@
 # Setdown - Line based set manipulation
 
-Author: Robert Massaioli  
+Author: [Robert Massaioli][6]
 Created in: 2015  
 
 ## What is setdown and how does it work?
 
 Setdown is a command line tool for line based set operations. To use setdown you write a "setdown
-definitions file" often suffixed with **.setdown**. If you are familiar with Make then you can think
+definitions file" often suffixed with **.setdown**. If you are familiar with [Make][3] then you can think
 of this **.setdown** file much like a Makefile. Inside that file you write a number of
 definitions of the form:
 
@@ -14,6 +14,11 @@ definitions of the form:
 
 This line says that "definitionName" is a new set definition that is a label for the intersection of
 "file-1.txt" and "file-2.txt". You can write more complicated expressions that this.
+
+### Example Setdown Projects
+
+You should read how setdown works in the sections below, however, if you wish to follow along by
+using a few descriptions then you should [checkout the setdown-examples project][2] on BitBucket.
 
 ### Input Files
 
@@ -112,7 +117,7 @@ And good luck!
 
 ## Building the code
 
-To build the code for this project just have Haskell installed and cabal and then:
+To build the code for this project just have [Haskell installed][4] and [cabal][5] and then:
 
     cabal sandbox init
     cabal install
@@ -141,3 +146,8 @@ I would love to have contributions to the project and, even though it may look l
 process just follow it because it is designed to make your life, and my life, easier. Cheers!
 
  [1]: http://en.wikipedia.org/wiki/Order_of_operations
+ [2]: https://bitbucket.org/robertmassaioli/setdown-examples
+ [3]: http://www.gnu.org/software/make/
+ [4]: https://www.haskell.org/platform/
+ [5]: https://www.haskell.org/cabal/
+ [6]: https://robertmassaioli.wordpress.com/
