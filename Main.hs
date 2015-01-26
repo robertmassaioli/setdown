@@ -7,7 +7,7 @@ import qualified Data.Text.Lazy.IO as T
 import qualified Data.Set as S
 import System.Exit
 
-import Control.Monad (unless)
+import Control.Monad (unless, forM_)
 import Data.List (intersperse, partition)
 import Control.Applicative
 
@@ -22,9 +22,12 @@ import DefinitionHelpers
 
 import DuplicateElimination
 import PerformOperations
+import SimpleDefinitionCycles
 
 import System.Directory (doesFileExist)
 import System.FilePath (dropFileName, (</>))
+
+import Text.Show.Pretty
 
 data Options = Options
    { outputDirectory :: Maybe FilePath
@@ -45,6 +48,9 @@ options = Options
    }
    &= program "setdown"
    &= summary "setdown allows you to perform set operations on multiple files efficiently using an intuitive language."
+
+prettyPrint :: Show a => a -> IO ()
+prettyPrint = putStrLn . ppShow
 
 -- TODO the setdownFile should be optional, at which point we should search the current directory
 -- for one
@@ -101,6 +107,13 @@ main = do
    printSimpleDefinitions simpleSetData
    printNewline
 
+   let cycles = getCyclesInSimpleDefinitions simpleSetData
+   unless (null cycles) $ do
+      putStrLn "Error: found cyclic dependencies in the definitions!"
+      printNewline
+      putStrLn "We found the following cycles:"
+      printCycles cycles
+      exitWith (ExitFailure 14)
 
    putStrLn "==> Copying and Sorting all input files from the definitions..."
    -- Step 1: For every unique file, sort it (Use external sort for this purpose:
@@ -122,6 +135,18 @@ main = do
    -- each contained and where to find their output files.
    printComputedResults computedFiles
    
+printCycles :: [SimpleDefinitions] -> IO ()
+printCycles sds = forM_ sds $ \sd -> do
+   putStr "   "
+   printCycle sd
+   printNewline
+
+printCycle :: SimpleDefinitions -> IO ()
+printCycle [] = putStrLn "Not a cycle."
+printCycle (x:xs) = sequence_ . intersperse (putStr " -> ") $ printIdentifiers
+   where
+      printIdentifiers = fmap (printIdentifier . sdId) round
+      round = [x] ++ xs ++ [x]
 
 -- TODO use the box library to print these items in a nice tabulated way
 printSortResults :: [(FilePath, FilePath)] -> IO ()
@@ -151,9 +176,12 @@ printComputedResults results = do
 
 printComputedResult :: (SimpleDefinition, FilePath) -> IO ()
 printComputedResult (SimpleDefinition ident _ _, fp) = do
-   T.putStr ident
+   printIdentifier ident
    putStr ": "
    putStrLn fp
+
+printIdentifier :: Identifier -> IO ()
+printIdentifier = T.putStr
 
 printNewline :: IO ()
 printNewline = putStrLn ""
