@@ -7,8 +7,9 @@ import qualified Data.Text.Lazy.IO as T
 import qualified Data.Set as S
 import System.Exit
 
-import Control.Monad (unless, forM_)
+import Control.Monad (unless, forM_, filterM)
 import Data.List (intersperse, partition)
+import Data.Maybe (fromMaybe)
 import Control.Applicative
 
 import SetData
@@ -68,10 +69,10 @@ main = do
    putStrLn "==> Creating the environment..."
    let baseDir = dropFileName inputFilePath
 
-   let cb = standardContext { cBaseDir = baseDir }
-   let context = case outputDirectory opts of
-                     Nothing -> cb { cOutputDir = baseDir </> "output" }
-                     Just od -> cb { cOutputDir = baseDir </> od }
+   let context = standardContext 
+                  { cBaseDir = baseDir 
+                  , cOutputDir = baseDir </> fromMaybe "output" (outputDirectory opts)
+                  }
 
    putStrLn $ "Base Directory: " ++ cBaseDir context
    putStrLn $ "Output Directory: " ++ cOutputDir context
@@ -85,20 +86,27 @@ main = do
    -- relative to the file that we pass in.
    printNewline
 
-   putStrLn "==> Verification (Ensuring correctness in the set description file)"
+   putStrLn "==> Verification (Ensuring correctness in the set definitions file)"
    case duplicateDefinitionName setData of
       [] -> putStrLn "OK: No duplicate definitions found."
       xs -> do 
-         putStrLn "Duplicate definitions found:"
+         putStrLn "[Error 11] Duplicate definitions found:"
          mapM_ T.putStrLn xs
          exitWith (ExitFailure 11)
 
    case unknownIdentifier setData of
       [] -> putStrLn "OK: No unknown identifiers found."
       xs -> do
-         putStrLn "Unknown identifiers used in the set descriptor file:"
+         putStrLn "[Error 12] Unknown identifiers used in the set descriptor file:"
          mapM_ T.putStrLn xs
          exitWith (ExitFailure 12)
+
+   allFiles <- filesNotFound . S.toList . extractFilenamesFromDefinitions $ setData
+   unless (null allFiles) $ do
+      putStrLn "[Error 13] the following files could not be found:"
+      forM_ allFiles (\fp -> putStrLn $ " - " ++ fp)
+      exitWith (ExitFailure 13)
+   putStrLn "OK: All files in the definitions could be found."
    printNewline
 
    putStr "==> Simplifying and eliminating duplicates from set definitions..."
@@ -135,6 +143,9 @@ main = do
    -- each contained and where to find their output files.
    printComputedResults computedFiles
    
+filesNotFound :: [FilePath] -> IO [FilePath]
+filesNotFound = filterM (\x -> not <$> doesFileExist x)
+
 printCycles :: [SimpleDefinitions] -> IO ()
 printCycles sds = forM_ sds $ \sd -> do
    putStr "   "
@@ -145,8 +156,8 @@ printCycle :: SimpleDefinitions -> IO ()
 printCycle [] = putStrLn "Not a cycle."
 printCycle (x:xs) = sequence_ . intersperse (putStr " -> ") $ printIdentifiers
    where
-      printIdentifiers = fmap (printIdentifier . sdId) round
-      round = [x] ++ xs ++ [x]
+      printIdentifiers = fmap (printIdentifier . sdId) loopRound
+      loopRound = [x] ++ xs ++ [x]
 
 -- TODO use the box library to print these items in a nice tabulated way
 printSortResults :: [(FilePath, FilePath)] -> IO ()
