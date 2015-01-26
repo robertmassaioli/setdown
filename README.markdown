@@ -71,11 +71,11 @@ when you expressions come out exactly the way that you expect them to.
 In the setdown language you can add comments by writing a double-dash (--) and then writing the
 comment till the end of the line. The following comments are valid:
 
-   -- This is a definition for A, created because we wanted to do X
-   A: "y.txt" - "z.txt"
-
-   -- This is an example of a comment halfway through an expression
-   B: (A \/ C) -- \/ D This is still a comment and \/ D never happens
+    -- This is a definition for A, created because we wanted to do X
+    A: "y.txt" - "z.txt"
+    
+    -- This is an example of a comment halfway through an expression
+    B: (A \/ C) -- \/ D This is still a comment and \/ D never happens
 
 You can use comments to leave messages for any people that might read your setdown definitions in
 the future. It may help explain to them what you were trying to do.
