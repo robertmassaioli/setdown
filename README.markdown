@@ -110,6 +110,20 @@ For more information on the options that you can pass to the setdown executable 
 
 And good luck!
 
+## Building the code
+
+To build the code for this project just have Haskell installed and cabal and then:
+
+    cabal sandbox init
+    cabal install
+
+And that should have the code built on your machine. Then, if you modify the code, just use cabal run to run setdown:
+
+    cabal run -- --help
+    cabal run mydefinitions.setdown
+
+That is all that there is to it! 
+
 ## Contributing to the setdown project
 
 If you wish to contribute to the setdown project then please just:
