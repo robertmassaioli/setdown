@@ -17,21 +17,21 @@ data ComputeState = CS
    , csContext :: Context
    }
 
+runSimpleDefinitions :: Context -> SimpleDefinitions -> [(FilePath, FilePath)] -> IO [(SimpleDefinition, FilePath)]
+runSimpleDefinitions context defs sortedFileMapping = fst <$> runStateT (computeSimpleDefinitions defs) cs
+   where
+      cs = CS
+         { expressionToFile = setupExpressionsToFile sortedFileMapping 
+         , definitionMap = toDefinitionMap defs
+         , csContext = context
+         }
+      
 toDefinitionMap :: SimpleDefinitions -> M.Map Identifier SimpleDefinition
 toDefinitionMap = M.fromList . fmap (\x -> (sdId x, x))
 
 setupExpressionsToFile :: [(FilePath, FilePath)] -> M.Map BaseExpression FilePath
 setupExpressionsToFile = M.fromList . fmap (first BaseFileExpression)
 
-runSimpleDefinitions :: SimpleDefinitions -> [(FilePath, FilePath)] -> IO [(SimpleDefinition, FilePath)]
-runSimpleDefinitions defs sortedFileMapping = fst <$> runStateT (computeSimpleDefinitions defs) cs
-   where
-      cs = CS
-         { expressionToFile = setupExpressionsToFile sortedFileMapping 
-         , definitionMap = toDefinitionMap defs
-         , csContext = standardContext
-         }
-      
 computeSimpleDefinitions :: SimpleDefinitions -> StateT ComputeState IO [(SimpleDefinition, FilePath)]
 computeSimpleDefinitions = mapM csd
    where

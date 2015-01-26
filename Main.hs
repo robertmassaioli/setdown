@@ -62,7 +62,6 @@ options = Options
 -- - The output directory. By default this should be 'set-output'
 main = do
    opts <- cmdArgs options
-   print opts
 
    let inputFilePath = setdownFile opts
    inputFileExists <- doesFileExist inputFilePath 
@@ -124,7 +123,7 @@ main = do
    printNewline
 
    putStrLn "==> Computing set operations between the files..."
-   computedFiles <- runSimpleDefinitions simpleSetData sortedFiles
+   computedFiles <- runSimpleDefinitions context simpleSetData sortedFiles
    printComputedResults computedFiles
  
    -- Step 2: Calculate the graph of everything that needs to be computed and compute things one at
