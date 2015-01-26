@@ -23,6 +23,13 @@ description:         There will be times when you have lots of set data and you 
                      built with the intention that you would use it in conjunction with version
                      control tools to manage your set data and set description file.
 
+homepage:            http://bitbucket.org/robertmassaioli/setdown
+bug-reports:         https://bitbucket.org/robertmassaioli/setdown/issues
+
+source-repository head
+   type: git
+   location: git@bitbucket.org:robertmassaioli/setdown.git
+
 -- The license under which the package is released.
 license:             BSD3
 
