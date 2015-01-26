@@ -64,7 +64,7 @@ main = do
 
    let cb = standardContext { cBaseDir = baseDir }
    let context = case outputDirectory opts of
-                     Nothing -> cb
+                     Nothing -> cb { cOutputDir = baseDir </> "output" }
                      Just od -> cb { cOutputDir = baseDir </> od }
 
    putStrLn $ "Base Directory: " ++ cBaseDir context
