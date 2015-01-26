@@ -11,7 +11,8 @@ import System.FilePath ((</>))
 import System.Directory (createDirectoryIfMissing)
 
 data Context = Context 
-   { cOutputDir :: FilePath
+   { cBaseDir :: FilePath
+   , cOutputDir :: FilePath
    , cFilesPerMerge :: Int
    , cBytesPerFileSplit :: Int64
    } deriving (Show, Eq)
@@ -21,7 +22,8 @@ smallContext = standardContext { cBytesPerFileSplit = 1000 }
 
 standardContext :: Context
 standardContext = Context
-   { cOutputDir = "output"
+   { cBaseDir = "./"
+   , cOutputDir = "output"
    , cFilesPerMerge = 10
    , cBytesPerFileSplit = 100 * 1024 * 1024
    }

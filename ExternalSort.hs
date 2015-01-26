@@ -55,7 +55,7 @@ sameChunk (_, a) (_, b) = a == b
 
 splitFile :: Context -> FilePath -> IO [FilePath]
 splitFile ctx inputFile = do
-   contents <- T.readFile inputFile
+   contents <- T.readFile (withBaseDir ctx inputFile)
    -- TODO replace constants with the context
    let splitContents = fmap (T.unlines . fmap fst) . groupBy sameChunk . fmap (chunkGroup . cBytesPerFileSplit $ ctx) . accLines . T.lines $ contents
    let namesAndContents = zip names splitContents
@@ -99,3 +99,6 @@ minHead fs = case catMaybes $ fmap safeHead fs of
 safeHead :: [a] -> Maybe a
 safeHead []    = Nothing
 safeHead (x:_) = Just x
+
+withBaseDir :: Context -> FilePath -> FilePath
+withBaseDir ctx fp = cBaseDir ctx </> fp

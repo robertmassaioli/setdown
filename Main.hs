@@ -1,5 +1,7 @@
+{-# LANGUAGE DeriveDataTypeable #-}
 module Main where
 
+import System.Console.CmdArgs
 import qualified Data.ByteString.Lazy as B
 import qualified Data.Text.Lazy as T
 import qualified Data.Text.Lazy.IO as T
@@ -25,8 +27,33 @@ import DefinitionHelpers
 import DuplicateElimination
 import PerformOperations
 
-prettyPrint :: Show a => a -> IO ()
-prettyPrint = putStrLn . ppShow
+import System.Directory (doesFileExist)
+import System.FilePath (dropFileName, (</>))
+
+data Options = Options
+   { outputDirectory :: Maybe FilePath
+   , setdownFile :: FilePath
+   } deriving (Show, Data, Typeable)
+
+{-
+sample = Sample{hello = def &= help "World argument" &= opt "world"}
+         &= summary "Sample v1"
+         -}
+
+options = Options 
+   { outputDirectory = def 
+      &= explicit 
+      &= name "output" 
+      &= typDir 
+      &= help "The directory in which to place the output contents. Relative to your .setdown file." 
+      &= opt "output" 
+   } 
+   { setdownFile = def
+      &= typ "definitions.setdown"
+      &= argPos 0
+   }
+   &= program "setdown"
+   &= summary "setdown allows you to perform set operations on multiple files efficiently using an intuitive language."
 
 -- TODO add in command line options parsing. The two inputs we should pass are: 
 -- - The name of the set definitions file. (By default pick the file that ends in setdown in the
@@ -34,7 +61,30 @@ prettyPrint = putStrLn . ppShow
 -- and say that it must be specified.
 -- - The output directory. By default this should be 'set-output'
 main = do
-   setData <- fmap parse B.getContents
+   opts <- cmdArgs options
+   print opts
+
+   let inputFilePath = setdownFile opts
+   inputFileExists <- doesFileExist inputFilePath 
+   unless inputFileExists $ do
+      putStrLn $ "Error: The given setdown file did not exist: " ++ inputFilePath
+      exitWith (ExitFailure 1)
+
+   -- Todo work out the parent directory of the setdown file
+   putStrLn "==> Creating the environment..."
+   let baseDir = dropFileName inputFilePath
+
+   let cb = standardContext { cBaseDir = baseDir }
+   let context = case outputDirectory opts of
+                     Nothing -> cb
+                     Just od -> cb { cOutputDir = baseDir </> od }
+
+   putStrLn $ "Base Directory: " ++ cBaseDir context
+   putStrLn $ "Output Directory: " ++ cOutputDir context
+   prepareContext context
+   printNewline
+
+   setData <- parse <$> (B.readFile . setdownFile $ opts)
    putStrLn "==> Parsed original definitions..."
    printDefinitions setData
    -- Step 0: Verify that the definitions are well defined and that the referenced files exist
@@ -47,14 +97,14 @@ main = do
       xs -> do 
          putStrLn "Duplicate definitions found:"
          mapM_ T.putStrLn xs
-         exitWith (ExitFailure 1)
+         exitWith (ExitFailure 11)
 
    case unknownIdentifier setData of
       [] -> putStrLn "OK: No unknown identifiers found."
       xs -> do
          putStrLn "Unknown identifiers used in the set descriptor file:"
          mapM_ T.putStrLn xs
-         exitWith (ExitFailure 2)
+         exitWith (ExitFailure 12)
    printNewline
 
    putStr "==> Simplifying and eliminating duplicates from set definitions..."
@@ -63,10 +113,6 @@ main = do
    printSimpleDefinitions simpleSetData
    printNewline
 
-   putStrLn "==> Creating the environment..."
-   let context = standardContext
-   prepareContext context
-   printNewline
 
    putStrLn "==> Copying and Sorting all input files from the definitions..."
    -- Step 1: For every unique file, sort it (Use external sort for this purpose:

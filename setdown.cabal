@@ -71,6 +71,7 @@ executable setdown
                        , filepath
                        , directory == 1.2.*
                        , mtl == 2.2.*
+                       , cmdargs == 0.10.*
   
   -- Directories containing source files.
   -- hs-source-dirs:      
