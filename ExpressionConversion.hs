@@ -6,7 +6,6 @@ import SetData
 import DefinitionHelpers
 import Control.Monad.State
 import qualified Data.Text.Lazy as T
-import Control.Applicative
 import Data.Maybe (catMaybes)
 import qualified Data.Set as S
 
@@ -31,9 +30,9 @@ fromDefinitions defs = do
    return . concat $ definitions
 
 fromDefinition :: Definition -> ConvState SimpleDefinitions
-fromDefinition (Definition id expression) = do 
-   (exp, conv) <- convertExpression expression
-   return $ SimpleDefinition id exp True : conv
+fromDefinition (Definition ident expression) = do 
+   (expr, conv) <- convertExpression expression
+   return $ SimpleDefinition ident expr True : conv
 
 convertExpression :: Expression -> ConvState (SimpleExpression, SimpleDefinitions)
 convertExpression (IdentifierExpression ident) = return (SimpleUnaryExpression (BaseIdentifierExpression ident), [])
@@ -67,11 +66,3 @@ thisAndFurther x = iterate (+1) x
 
 integerToId :: Integer -> Identifier
 integerToId = T.pack . show
-
--- TODO we now want to find all of the duplicates
--- There are three scenarios that we need to consider:
--- 0 Retain dupes: we can randomly select a node to be the remainder and replace references to the
--- rest
--- 1 Retain dupes: we select the retain dupe and point all of the other dupes to it
--- 2+ Retain dupes: we select a retain dupe and point the other retain dupes to it and replace all
--- of the other dupes with it

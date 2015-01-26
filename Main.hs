@@ -3,7 +3,6 @@ module Main where
 
 import System.Console.CmdArgs
 import qualified Data.ByteString.Lazy as B
-import qualified Data.Text.Lazy as T
 import qualified Data.Text.Lazy.IO as T
 import qualified Data.Set as S
 import System.Exit
@@ -11,9 +10,6 @@ import System.Exit
 import Control.Monad (unless)
 import Data.List (intersperse, partition)
 import Control.Applicative
-import qualified Data.UUID.V4 as UUID
-
-import Text.Show.Pretty
 
 import SetData
 import SetInput
@@ -35,11 +31,7 @@ data Options = Options
    , setdownFile :: FilePath
    } deriving (Show, Data, Typeable)
 
-{-
-sample = Sample{hello = def &= help "World argument" &= opt "world"}
-         &= summary "Sample v1"
-         -}
-
+options :: Options
 options = Options 
    { outputDirectory = def 
       &= explicit 
@@ -55,11 +47,9 @@ options = Options
    &= program "setdown"
    &= summary "setdown allows you to perform set operations on multiple files efficiently using an intuitive language."
 
--- TODO add in command line options parsing. The two inputs we should pass are: 
--- - The name of the set definitions file. (By default pick the file that ends in setdown in the
--- current directory. If there is more or less than one file that has a '.setdown' suffix then fail
--- and say that it must be specified.
--- - The output directory. By default this should be 'set-output'
+-- TODO the setdownFile should be optional, at which point we should search the current directory
+-- for one
+main :: IO ()
 main = do
    opts <- cmdArgs options
 
@@ -123,17 +113,16 @@ main = do
    printNewline
 
    putStrLn "==> Computing set operations between the files..."
-   computedFiles <- runSimpleDefinitions context simpleSetData sortedFiles
-   printComputedResults computedFiles
- 
    -- Step 2: Calculate the graph of everything that needs to be computed and compute things one at
    -- a time. Even make sure that you store the temporary results along the way. That way we can
    -- refer to them later if the same computation is made twice. We should certainly memoize with
    -- the file system. It would be great if we could print out the results of the computations as we
    -- go.
-   
+   computedFiles <- runSimpleDefinitions context simpleSetData sortedFiles
    -- Step 3: Print out the final statistics with the defitions pointing to how many elements that
    -- each contained and where to find their output files.
+   printComputedResults computedFiles
+   
 
 -- TODO use the box library to print these items in a nice tabulated way
 printSortResults :: [(FilePath, FilePath)] -> IO ()

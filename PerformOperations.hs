@@ -7,7 +7,6 @@ import Context
 import SetData
 import qualified Data.Text.Lazy as T
 import qualified Data.Text.Lazy.IO as T
-import qualified Data.Set as S
 import qualified Data.Map as M
 import qualified Data.UUID.V4 as UUID
 
@@ -42,11 +41,11 @@ computeSimpleDefinitions = mapM csd
 
 -- Always return the file that should be used for the next computation
 computeSimpleDefinition :: SimpleDefinition -> StateT ComputeState IO FilePath
-computeSimpleDefinition (SimpleDefinition ident (SimpleUnaryExpression be) retain) = do
+computeSimpleDefinition (SimpleDefinition ident (SimpleUnaryExpression be) _) = do
    newFile <- computeBaseExpression be
    mapIdToFile ident newFile
    return newFile
-computeSimpleDefinition (SimpleDefinition ident (SimpleBinaryExpression op left right) retain) = do
+computeSimpleDefinition (SimpleDefinition ident (SimpleBinaryExpression op left right) _) = do
    leftFile <- computeBaseExpression left
    rightFile <- computeBaseExpression right
    ctx <- csContext <$> get
@@ -62,7 +61,7 @@ computeBaseExpression be@(BaseFileExpression fp) = do
       Nothing -> fail $ "Could not find a sorted file for: " ++ fp
 computeBaseExpression be@(BaseIdentifierExpression ident) = do
    cs <- get
-   case M.lookup (BaseIdentifierExpression ident) (expressionToFile cs) of
+   case M.lookup be (expressionToFile cs) of
       Just preComputedFile -> return preComputedFile
       Nothing -> case M.lookup ident (definitionMap cs) of
          Nothing -> fail $ "Could not find a definition for the identifier: " ++ T.unpack ident
@@ -92,13 +91,13 @@ linesSetOperation ot = go
       go [] [] = []
       go xs [] = if otKeepRemainderLeft ot then xs else []
       go [] xs = if otKeepRemainderRight ot then xs else []
-      go ol@(l:ls) or@(r:rs) = 
+      go left@(l:ls) right@(r:rs) = 
          if (otCompare ot) l r 
-            then chosen : go (dropWhileChosen ol) (dropWhileChosen or)
+            then chosen : go (dropWhileChosen left) (dropWhileChosen right)
             else case compare l r of
-               LT -> go ls or
-               EQ -> go ls rs
-               GT -> go ol rs
+               LT -> go ls   right
+               EQ -> go ls   rs
+               GT -> go left rs
          where
             chosen = (otChoose ot) l r
             dropWhileChosen = dropWhile (== chosen)

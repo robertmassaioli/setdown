@@ -62,7 +62,7 @@ splitFile ctx inputFile = do
    sequence_ . fmap (uncurry T.writeFile) $ namesAndContents
    return . fmap fst $ namesAndContents
    where
-      names = zipWith (\a b -> cOutputDir ctx </> a ++ "." ++ show b ++ ".split") (repeat inputFile) [1..]
+      names = zipWith (\a b -> cOutputDir ctx </> a ++ "." ++ show b ++ ".split") (repeat inputFile) [(1 :: Integer)..]
 
 mergeFiles :: Context -> [FilePath] -> IO FilePath
 mergeFiles _ [] = error "Tried to merge no files..."

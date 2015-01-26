@@ -1,7 +1,7 @@
 {
+{-# OPTIONS_GHC -w #-}
 module SetLanguage where
 
-import qualified Data.ByteString.Lazy as BL
 import qualified Data.Text.Lazy as TL
 import qualified Data.Text.Lazy.Encoding as TLE
 }
@@ -28,6 +28,8 @@ tokens :-
    $ident+           { IdentifierTok . TLE.decodeUtf8 }
 
 {
+-- TODO include the location in which the token ocurred so that we can give better error messages
+-- later in the parsing
 data SetToken
    = FilenameTok FilePath
    | IdentifierDefinitionTok TL.Text

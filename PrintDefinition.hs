@@ -14,8 +14,8 @@ printDefinitions :: Definitions -> IO ()
 printDefinitions = sequence_ . intersperse printNewline . fmap printDefinition 
 
 printDefinition :: Definition -> IO ()
-printDefinition (Definition id expression) = do
-   printId id
+printDefinition (Definition ident expression) = do
+   printId ident
    putStr ": "
    printExpression expression
    printNewline
@@ -30,7 +30,7 @@ printExpression (BinaryExpression op left right) = do
    putStr " "
    printSubExpression right
    where
-      printSubExpression exp = maybeWrapInBrackets (isBinaryExpression exp) (printExpression exp)
+      printSubExpression expr = maybeWrapInBrackets (isBinaryExpression expr) (printExpression expr)
 
 
 -- Simple Definition Printing
@@ -38,8 +38,8 @@ printSimpleDefinitions :: SimpleDefinitions -> IO ()
 printSimpleDefinitions = sequence_ . intersperse printNewline . fmap printSimpleDefinition
 
 printSimpleDefinition :: SimpleDefinition -> IO ()
-printSimpleDefinition (SimpleDefinition id se _) = do
-   printId id
+printSimpleDefinition (SimpleDefinition ident se _) = do
+   printId ident
    putStr ": "
    printSimpleExpression se
    printNewline

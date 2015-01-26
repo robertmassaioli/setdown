@@ -4,25 +4,35 @@ module DuplicateElimination
    ) where
 
 import SetData
-import Data.List (sort, groupBy, partition)
+import Data.Ord (comparing)
+import Data.List (sort, sortBy, groupBy, partition)
 import qualified Data.Set as S
 
 eliminateDuplicates :: SimpleDefinitions -> SimpleDefinitions 
-eliminateDuplicates sds = (flip updateWithDuplicates sds) $ findDuplicates sds
+eliminateDuplicates sds = sort . (flip updateWithDuplicates sds) $ findDuplicates sds
 
 updateWithDuplicates :: [Duplicates] -> SimpleDefinitions -> SimpleDefinitions
 updateWithDuplicates ds sds = S.toList $ foldr updateWithDuplicate (S.fromList sds) ds
 
+-- TODO we now want to find all of the duplicates
+-- There are three scenarios that we need to consider:
+-- 0 Retain dupes: we can randomly select a node to be the remainder and replace references to the
+-- rest
+-- 1 Retain dupes: we select the retain dupe and point all of the other dupes to it
+-- 2+ Retain dupes: we select a retain dupe and point the other retain dupes to it and replace all
+-- of the other dupes with it
 updateWithDuplicate :: Duplicates -> S.Set SimpleDefinition -> S.Set SimpleDefinition
-updateWithDuplicate (Duplicates [] (d:ds)) sds = S.insert d cleanedDefs
+updateWithDuplicate (Duplicates [] []) sds = sds
+updateWithDuplicate dupes sds = S.insert retainDupe cleanedDefs
    where
       cleanedDefs = S.map (replaceIds newId oldIds) remainingDefs
-      remainingDefs = sds S.\\ (S.fromList ds)
-      newId = sdId d
-      oldIds = S.fromList $ fmap sdId ds
+      remainingDefs = sds S.\\ (S.fromList discardDupes)
+      newId = sdId retainDupe
+      oldIds = S.fromList $ fmap sdId discardDupes
+      (retainDupe : discardDupes) = dupRetain dupes ++ dupDiscontinue dupes
 
 replaceIds :: Identifier -> S.Set Identifier -> SimpleDefinition -> SimpleDefinition
-replaceIds newId oldIds (SimpleDefinition ident exp retain) = SimpleDefinition ident (replaceIdsInExpression newId oldIds exp) retain
+replaceIds newId oldIds (SimpleDefinition ident expr retain) = SimpleDefinition ident (replaceIdsInExpression newId oldIds expr) retain
 
 replaceIdsInExpression :: Identifier -> S.Set Identifier -> SimpleExpression -> SimpleExpression
 replaceIdsInExpression newId oldIds (SimpleUnaryExpression be) = SimpleUnaryExpression (replaceIdsInBaseExpression newId oldIds be)
@@ -46,7 +56,7 @@ data Duplicates = Duplicates
    } deriving (Show)
 
 orderDefinitions :: SimpleDefinitions -> SimpleDefinitions
-orderDefinitions = sort . fmap orderDefinition
+orderDefinitions = sortBy (comparing sdExpression) . fmap orderDefinition
 
 orderDefinition :: SimpleDefinition -> SimpleDefinition 
 orderDefinition sd = sd { sdExpression = orderExpression . sdExpression $ sd }
