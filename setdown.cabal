@@ -10,7 +10,7 @@ name:                setdown
 -- PVP summary:      +-+------- breaking API changes
 --                   | | +----- non-breaking API additions
 --                   | | | +--- code changes with no API change
-version:             0.1.0.0
+version:             0.1.0.1
 
 -- A short (one-line) description of the package.
 synopsis:            Treating files as sets to perform rapid set manipulation.
@@ -95,6 +95,8 @@ executable setdown
                        , split         == 0.2.*
                        , mtl           == 2.2.*
                        , cmdargs       == 0.10.*
+
+  build-tools:         alex, happy
   
   -- Directories containing source files.
   -- hs-source-dirs:      
