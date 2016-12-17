@@ -26,14 +26,16 @@ This line says that "definitionName" is a new set definition that is a label for
 
 ### Example Setdown Projects
 
-You should read how setdown works in the sections below, however, if you wish to follow along by
-using a few descriptions then you should [checkout the setdown-examples project][2] on BitBucket.
+[Checkout the setdown-examples project][2] on Bitbucket; it will show you how setdown works.
+
+However, to get an in-depth description of setdown and its abilities you should
+read the sections below.
 
 ### Input Files
 
 In setdown *each file is treated as a list of elements where each line
 is an element*. You may have thought that each file would be treated as a Set of elements (no
-duplicate lines). But I decided not to make this a requirement, this is because I don't assume that 
+duplicate lines). But I decided not to make this a requirement, this is because I don't assume that
 you will give us sorted input with no duplicates or that it will be easy for you to do so. Instead
 you can give us any file that you like and the first thing that setdown will do to those files is
 sort them and remove duplicates; essentially turning them into sets.
@@ -44,9 +46,9 @@ is not the same directory as the **.setdown** file then where will setdown look 
 some-elements.txt file? The answer is that we always look for files relative to the **.setdown**
 file. That is where you wrote your definitions so the paths are relative to that. It was designed in
 this way so that you could run setdown from anywhere in the directory tree and still get the same
-result. It was an important design of setdown that you always get the same result every time that you run it. 
+result. It was an important design of setdown that you always get the same result every time that you run it.
 Setdown has been designed to be current working directory invariant, as opposed to many
-other command line programs. Please keep this in mind. 
+other command line programs. Please keep this in mind.
 
 ### Set Operations and Precidence
 
@@ -87,7 +89,7 @@ comment till the end of the line. The following comments are valid:
 
     -- This is a definition for A, created because we wanted to do X
     A: "y.txt" - "z.txt"
-    
+
     -- This is an example of a comment halfway through an expression
     B: (A \/ C) -- \/ D This is still a comment and \/ D never happens
 
@@ -102,7 +104,7 @@ In the setdown language you can write a definition in the following format:
 
 Where the definition name is the identifier that you give to that expression. An expression is the
 application of set operations on identifiers or files. A practical example of what this looks like
-should help cement what this means. Here is a valid setdown file: 
+should help cement what this means. Here is a valid setdown file:
 
     -- A is the intersection of the file b-1.out and the set B
     A: "b-1.out" /\ B
@@ -136,7 +138,7 @@ And that should have the code built on your machine. Then, if you modify the cod
     cabal run -- --help
     cabal run mydefinitions.setdown
 
-That is all that there is to it! 
+That is all that there is to it!
 
 ## Contributing to the setdown project
 
