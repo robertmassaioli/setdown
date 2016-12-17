@@ -9,7 +9,7 @@ import           System.Exit
 
 import           Control.Applicative
 import           Control.Monad          (filterM, forM_, unless)
-import           Data.List              (intersperse, partition)
+import           Data.List              (intersperse, isSuffixOf, partition)
 import           Data.Maybe             (fromMaybe)
 
 import           Context
@@ -25,7 +25,8 @@ import           DuplicateElimination
 import           PerformOperations
 import           SimpleDefinitionCycles
 
-import           System.Directory       (doesFileExist)
+import           System.Directory       (doesFileExist, getCurrentDirectory,
+                                         listDirectory)
 import           System.FilePath        (dropFileName, (</>))
 
 -- Useful for Print Debugging
@@ -56,14 +57,29 @@ options = Options
    &= program "setdown"
    &= summary "setdown allows you to perform set operations on multiple files efficiently using an intuitive language."
 
-data GuessError = NoMatchingFiles | TooManyMatchingFiles
+data GuessError
+  = NoMatchingFiles
+  | TooManyMatchingFiles [FilePath]
 
 -- attempt to use the
 guessInputFile :: IO (Either GuessError FilePath)
-guessInputFile = return (Left NoMatchingFiles)
+guessInputFile = do
+  currentDirFiles <- listDirectory =<< getCurrentDirectory
+  case filter hasSetdownExtension currentDirFiles of
+    [] -> return . Left $ NoMatchingFiles
+    [x] -> return . Right $ x
+    xs -> return . Left $ TooManyMatchingFiles xs
+  where
+    hasSetdownExtension filePath = ".setdown" `isSuffixOf` filePath
 
 getInputFileOrFail :: Maybe FilePath -> IO FilePath
-getInputFileOrFail (Just userSuggested) = error ""
+getInputFileOrFail (Just userSuggested) = do
+  inputFileExists <- doesFileExist userSuggested
+  if inputFileExists
+    then return userSuggested
+    else do
+      putStrLn $ "Error: The given setdown file did not exist: " ++ userSuggested
+      exitWith (ExitFailure 1)
 getInputFileOrFail Nothing = do
   guessResult <- guessInputFile
   case guessResult of
@@ -74,8 +90,9 @@ getInputFileOrFail Nothing = do
         else do
          putStrLn $ "Error: The given setdown file did not exist: " ++ match
          exitWith (ExitFailure 1)
-    (Left TooManyMatchingFiles) -> do
+    (Left (TooManyMatchingFiles matches)) -> do
       putStrLn $ "Error: There were too many files that look like setdown definition files in the current directory. Could not pick one. Select one with '--input'."
+      putStrLn $ "Matching files: " ++ (show matches)
       exitWith (ExitFailure 2)
     (Left NoMatchingFiles) -> do
       putStrLn $ "Error: There were no files that look like setdown definition files in the current directory. Write one or select one with '--input'."
@@ -88,6 +105,7 @@ main = do
    opts <- cmdArgs options
 
    inputFilePath <- getInputFileOrFail (setdownFile opts)
+   putStrLn $ "==> Using setdown file: " ++ inputFilePath
 
    -- Todo work out the parent directory of the setdown file
    putStrLn "==> Creating the environment..."
