@@ -1,30 +1,30 @@
 module PerformOperations (runSimpleDefinitions) where
 
-import Control.Arrow (first)
-import Control.Applicative
-import Control.Monad.State.Lazy
-import Context
-import SetData
-import qualified Data.Text.Lazy as T
-import qualified Data.Text.Lazy.IO as T
-import qualified Data.Map as M
-import qualified Data.UUID.V4 as UUID
+import           Context
+import           Control.Applicative
+import           Control.Arrow            (first)
+import           Control.Monad.State.Lazy
+import qualified Data.Map                 as M
+import qualified Data.Text.Lazy           as T
+import qualified Data.Text.Lazy.IO        as T
+import qualified Data.UUID.V4             as UUID
+import           SetData
 
 data ComputeState = CS
    { expressionToFile :: M.Map BaseExpression FilePath
-   , definitionMap :: M.Map Identifier SimpleDefinition
-   , csContext :: Context
+   , definitionMap    :: M.Map Identifier SimpleDefinition
+   , csContext        :: Context
    }
 
 runSimpleDefinitions :: Context -> SimpleDefinitions -> [(FilePath, FilePath)] -> IO [(SimpleDefinition, FilePath)]
 runSimpleDefinitions context defs sortedFileMapping = fst <$> runStateT (computeSimpleDefinitions defs) cs
    where
       cs = CS
-         { expressionToFile = setupExpressionsToFile sortedFileMapping 
+         { expressionToFile = setupExpressionsToFile sortedFileMapping
          , definitionMap = toDefinitionMap defs
          , csContext = context
          }
-      
+
 toDefinitionMap :: SimpleDefinitions -> M.Map Identifier SimpleDefinition
 toDefinitionMap = M.fromList . fmap (\x -> (sdId x, x))
 
@@ -54,7 +54,7 @@ computeSimpleDefinition (SimpleDefinition ident (SimpleBinaryExpression op left 
    return resultFile
 
 computeBaseExpression :: BaseExpression -> StateT ComputeState IO FilePath
-computeBaseExpression be@(BaseFileExpression fp) = do 
+computeBaseExpression be@(BaseFileExpression fp) = do
    expressionMap <- expressionToFile <$> get
    case M.lookup be expressionMap of
       Just sortedFile -> return sortedFile
@@ -74,25 +74,25 @@ mapIdToFile ident fp = modify (\currentState -> currentState
 
 fileSetOperation :: Context -> Operator -> FilePath -> FilePath -> IO FilePath
 fileSetOperation ctx ot leftFp rightFp = do
-   leftContents <- T.lines <$> T.readFile leftFp 
-   rightContents <- T.lines <$> T.readFile rightFp 
-   let mergedContents = linesSetOperation (operatorTools ot) leftContents rightContents 
-   randomFilename <- randomFilenameInOutput ctx
-   T.writeFile randomFilename . T.unlines $ mergedContents
-   return randomFilename
-   
+   leftContents <- T.lines <$> T.readFile leftFp
+   rightContents <- T.lines <$> T.readFile rightFp
+   let mergedContents = linesSetOperation (operatorTools ot) leftContents rightContents
+   outputFilename <- randomFilenameInOutput ctx
+   T.writeFile outputFilename . T.unlines $ mergedContents
+   return outputFilename
+
 randomFilenameInOutput :: Context -> IO FilePath
 randomFilenameInOutput ctx = inOutput ctx . show <$> UUID.nextRandom
 
 linesSetOperation :: OperatorTools T.Text -> [T.Text] -> [T.Text] -> [T.Text]
 linesSetOperation ot = go
-   where 
+   where
       go :: [T.Text] -> [T.Text] -> [T.Text]
       go [] [] = []
       go xs [] = if otKeepRemainderLeft ot then xs else []
       go [] xs = if otKeepRemainderRight ot then xs else []
-      go left@(l:ls) right@(r:rs) = 
-         if (otCompare ot) l r 
+      go left@(l:ls) right@(r:rs) =
+         if (otCompare ot) l r
             then chosen : go (dropWhileChosen left) (dropWhileChosen right)
             else case compare l r of
                LT -> go ls   right
@@ -101,18 +101,18 @@ linesSetOperation ot = go
          where
             chosen = (otChoose ot) l r
             dropWhileChosen = dropWhile (== chosen)
-      
+
 data (Eq a, Ord a) => OperatorTools a = OT
-   { otCompare :: a -> a -> Bool
-   , otChoose  :: a -> a -> a
-   , otKeepRemainderLeft :: Bool
+   { otCompare            :: a -> a -> Bool
+   , otChoose             :: a -> a -> a
+   , otKeepRemainderLeft  :: Bool
    , otKeepRemainderRight :: Bool
-   } 
+   }
 
 operatorTools :: Ord a => Operator -> OperatorTools a
 operatorTools And          = OT (==)            const False False -- fst or snd, it does not matter they are equal
 operatorTools Or           = OT (const2 True)   min True True
-operatorTools Difference   = OT (<)             const True False 
+operatorTools Difference   = OT (<)             const True False
 
 const2 :: a -> b -> c -> a
 const2 = const . const
