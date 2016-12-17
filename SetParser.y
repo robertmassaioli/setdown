@@ -3,8 +3,7 @@ module SetParser where
 
 import SetLanguage
 import qualified Data.Text.Lazy as TL
--- TODO add precidence of operators
--- TODO add comments to the language
+-- TODO add precedence of operators
 -- TODO The tokens should come with line number information so that we can better pinpoint errors.
 }
 
@@ -49,7 +48,7 @@ operator : and    { IntersectionOp }
 parseError :: [SetToken] -> a
 parseError tokens = error $ "Parse error: " ++ show tokens
 
-data SetOperator 
+data SetOperator
    = IntersectionOp
    | UnionOp
    | DifferenceOp

@@ -1,32 +1,32 @@
 {-# LANGUAGE DeriveDataTypeable #-}
 module Main where
 
-import System.Console.CmdArgs
-import qualified Data.ByteString.Lazy as B
-import qualified Data.Text.Lazy.IO as T
-import qualified Data.Set as S
-import System.Exit
+import qualified Data.ByteString.Lazy   as B
+import qualified Data.Set               as S
+import qualified Data.Text.Lazy.IO      as T
+import           System.Console.CmdArgs
+import           System.Exit
 
-import Control.Monad (unless, forM_, filterM)
-import Data.List (intersperse, partition)
-import Data.Maybe (fromMaybe)
-import Control.Applicative
+import           Control.Applicative
+import           Control.Monad          (filterM, forM_, unless)
+import           Data.List              (intersperse, partition)
+import           Data.Maybe             (fromMaybe)
 
-import SetData
-import SetInput
-import SetInputVerification
-import Context
-import ExternalSort
-import PrintDefinition
-import ExpressionConversion
-import DefinitionHelpers
+import           Context
+import           DefinitionHelpers
+import           ExpressionConversion
+import           ExternalSort
+import           PrintDefinition
+import           SetData
+import           SetInput
+import           SetInputVerification
 
-import DuplicateElimination
-import PerformOperations
-import SimpleDefinitionCycles
+import           DuplicateElimination
+import           PerformOperations
+import           SimpleDefinitionCycles
 
-import System.Directory (doesFileExist)
-import System.FilePath (dropFileName, (</>))
+import           System.Directory       (doesFileExist)
+import           System.FilePath        (dropFileName, (</>))
 
 -- Useful for Print Debugging
 -- import Text.Show.Pretty
@@ -36,23 +36,50 @@ import System.FilePath (dropFileName, (</>))
 
 data Options = Options
    { outputDirectory :: Maybe FilePath
-   , setdownFile :: FilePath
+   , setdownFile     :: Maybe FilePath
    } deriving (Show, Data, Typeable)
 
 options :: Options
-options = Options 
-   { outputDirectory = def 
-      &= explicit 
-      &= name "output" 
-      &= typDir 
-      &= help "The directory in which to place the output contents. Relative to your .setdown file." 
-      &= opt "output" 
+options = Options
+   { outputDirectory = def
+      &= explicit
+      &= name "output"
+      &= typDir
+      &= help "The directory in which to place the output contents. Relative to your .setdown file."
+      &= opt "output"
    , setdownFile = def
+      &= explicit
+      &= name "input"
+      &= help "The setdown definition file that contains all of the set operations that should be performed."
       &= typ "definitions.setdown"
-      &= argPos 0
    }
    &= program "setdown"
    &= summary "setdown allows you to perform set operations on multiple files efficiently using an intuitive language."
+
+data GuessError = NoMatchingFiles | TooManyMatchingFiles
+
+-- attempt to use the
+guessInputFile :: IO (Either GuessError FilePath)
+guessInputFile = return (Left NoMatchingFiles)
+
+getInputFileOrFail :: Maybe FilePath -> IO FilePath
+getInputFileOrFail (Just userSuggested) = error ""
+getInputFileOrFail Nothing = do
+  guessResult <- guessInputFile
+  case guessResult of
+    (Right match) -> do
+      inputFileExists <- doesFileExist match
+      if inputFileExists
+        then return match
+        else do
+         putStrLn $ "Error: The given setdown file did not exist: " ++ match
+         exitWith (ExitFailure 1)
+    (Left TooManyMatchingFiles) -> do
+      putStrLn $ "Error: There were too many files that look like setdown definition files in the current directory. Could not pick one. Select one with '--input'."
+      exitWith (ExitFailure 2)
+    (Left NoMatchingFiles) -> do
+      putStrLn $ "Error: There were no files that look like setdown definition files in the current directory. Write one or select one with '--input'."
+      exitWith (ExitFailure 3)
 
 -- TODO the setdownFile should be optional, at which point we should search the current directory
 -- for one
@@ -60,18 +87,14 @@ main :: IO ()
 main = do
    opts <- cmdArgs options
 
-   let inputFilePath = setdownFile opts
-   inputFileExists <- doesFileExist inputFilePath 
-   unless inputFileExists $ do
-      putStrLn $ "Error: The given setdown file did not exist: " ++ inputFilePath
-      exitWith (ExitFailure 1)
+   inputFilePath <- getInputFileOrFail (setdownFile opts)
 
    -- Todo work out the parent directory of the setdown file
    putStrLn "==> Creating the environment..."
    let baseDir = dropFileName inputFilePath
 
-   let context = standardContext 
-                  { cBaseDir = baseDir 
+   let context = standardContext
+                  { cBaseDir = baseDir
                   , cOutputDir = baseDir </> fromMaybe "output" (outputDirectory opts)
                   }
 
@@ -80,7 +103,7 @@ main = do
    prepareContext context
    printNewline
 
-   setData <- parse <$> (B.readFile . setdownFile $ opts)
+   setData <- parse <$> (B.readFile inputFilePath)
    putStrLn "==> Parsed original definitions..."
    printDefinitions setData
    -- Step 0: Verify that the definitions are well defined and that the referenced files exist
@@ -90,7 +113,7 @@ main = do
    putStrLn "==> Verification (Ensuring correctness in the set definitions file)"
    case duplicateDefinitionName setData of
       [] -> putStrLn "OK: No duplicate definitions found."
-      xs -> do 
+      xs -> do
          putStrLn "[Error 11] Duplicate definitions found:"
          mapM_ T.putStrLn xs
          exitWith (ExitFailure 11)
@@ -147,7 +170,7 @@ main = do
    -- Step 3: Print out the final statistics with the defitions pointing to how many elements that
    -- each contained and where to find their output files.
    printComputedResults computedFiles
-   
+
 filesNotFound :: [FilePath] -> IO [FilePath]
 filesNotFound = filterM (\x -> not <$> doesFileExist x)
 
@@ -172,7 +195,7 @@ printSortResult :: (FilePath, FilePath) -> IO ()
 printSortResult (unsortedFile, sortedFile) = do
    putStr . wrapInQuotes $ unsortedFile
    putStr " (unsorted) => "
-   putStr . wrapInQuotes $ sortedFile 
+   putStr . wrapInQuotes $ sortedFile
    putStrLn " (sorted)"
    where
       wrapInQuotes x = "\"" ++ x ++ "\""
@@ -185,10 +208,10 @@ printComputedResults results = do
       printNewline
    unless (null retainResults) $ do
       putStrLn "Required results:"
-      printResults retainResults 
+      printResults retainResults
    where
       (retainResults, tempResults) = partition (sdRetain . fst) results
-      printResults = sequence_ . intersperse printNewline . fmap printComputedResult 
+      printResults = sequence_ . intersperse printNewline . fmap printComputedResult
 
 printComputedResult :: (SimpleDefinition, FilePath) -> IO ()
 printComputedResult (SimpleDefinition ident _ _, fp) = do
