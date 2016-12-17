@@ -12,6 +12,16 @@ installed and then:
 
 This works because [setdown is on hackage][7]!
 
+### With nix for local development
+
+If you want to install setdown locally using nix for local development then do the following:
+
+    $ nix-shell
+    $ cabal sandbox init
+    $ cabal install
+
+That should install setdown in development mode locally.  
+
 ## What is setdown and how does it work?
 
 Setdown is a command line tool for line based set operations. To use setdown you write a "setdown
