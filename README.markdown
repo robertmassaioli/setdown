@@ -12,16 +12,6 @@ installed and then:
 
 This works because [setdown is on hackage][7]!
 
-### With nix for local development
-
-If you want to install setdown locally using nix for local development then do the following:
-
-    $ nix-shell
-    $ cabal sandbox init
-    $ cabal install
-
-That should install setdown in development mode locally.  
-
 ## What is setdown and how does it work?
 
 Setdown is a command line tool for line based set operations. To use setdown you write a "setdown
@@ -149,6 +139,16 @@ And that should have the code built on your machine. Then, if you modify the cod
     cabal run mydefinitions.setdown
 
 That is all that there is to it!
+
+### With nix for local development
+
+If you want to install setdown locally using nix for local development then do the following:
+
+    $ nix-shell
+    $ cabal sandbox init
+    $ cabal install
+
+That should install setdown in development mode locally.  
 
 ## Contributing to the setdown project
 

@@ -111,8 +111,8 @@ data (Eq a, Ord a) => OperatorTools a = OT
 
 operatorTools :: Ord a => Operator -> OperatorTools a
 operatorTools And          = OT (==)            const False False -- fst or snd, it does not matter they are equal
-operatorTools Or           = OT (const2 True)   min True True
-operatorTools Difference   = OT (<)             const True False
+operatorTools Or           = OT (const2 True)   min   True  True
+operatorTools Difference   = OT (<)             const True  False
 
 const2 :: a -> b -> c -> a
 const2 = const . const
