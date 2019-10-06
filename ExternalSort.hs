@@ -1,6 +1,6 @@
-module ExternalSort 
-   ( extractAndSortFiles 
-   , extractAndSortFile 
+module ExternalSort
+   ( extractAndSortFiles
+   , extractAndSortFile
    , splitSortAndMerge
    ) where
 
@@ -12,7 +12,6 @@ import Data.List.Split (chunksOf)
 import Control.Monad (forM)
 import System.FilePath ((</>))
 import Control.Arrow (second)
-import Control.Applicative
 import qualified Data.Text.Lazy as T
 import qualified Data.Text.Lazy.IO as T
 
@@ -35,7 +34,7 @@ splitAndSort ctx fp = do
    mapM simpleFileSort splits
 
 simpleFileSort :: FilePath -> IO FilePath
-simpleFileSort fp = do 
+simpleFileSort fp = do
    T.writeFile sfp . T.unlines . sort . T.lines =<< T.readFile fp
    return sfp
    where

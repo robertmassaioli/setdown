@@ -1,7 +1,6 @@
 module PerformOperations (runSimpleDefinitions) where
 
 import           Context
-import           Control.Applicative
 import           Control.Arrow            (first)
 import           Control.Monad.State.Lazy
 import qualified Data.Map                 as M

@@ -7,7 +7,6 @@ import qualified Data.Text.Lazy.IO      as T
 import           System.Console.CmdArgs
 import           System.Exit
 
-import           Control.Applicative
 import           Control.Monad          (filterM, forM_, unless)
 import           Data.List              (intersperse, isSuffixOf, partition)
 import           Data.Maybe             (fromMaybe)
