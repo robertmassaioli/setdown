@@ -62,7 +62,7 @@ For example, they might be used in the following way:
 You may be wondering what [operator precidence][1] the setdown language uses and the answer is:
 there is no operator precidence at all, instead *you must clearly specify the precidence of nested
 expressions with brackets*. This is very important because it will result in parsing errors
-otherwise. To show you why I made this decision lets show you an example:
+otherwise. To explain the reasoning for explicit operator precedence:
 
     -- Here is a simple expression
     def: A /\ B \/ C
@@ -76,8 +76,7 @@ otherwise. To show you why I made this decision lets show you an example:
     defV2-bempty: A /\ C
 
 So as you can see, order of operations really matters for set operations. Because it is so critical
-I decided to make the use of brackets mandatory. Sorry for the extra brackets but you will thank me
-when you expressions come out exactly the way that you expect them to.
+the use of brackets is mandatory.
 
 ### Comments
 
@@ -127,13 +126,12 @@ And good luck!
 
 To build the code for this project just have [Haskell installed][4] and [cabal][5] and then:
 
-    cabal sandbox init
-    cabal install
+    cabal new-install
 
 And that should have the code built on your machine. Then, if you modify the code, just use cabal run to run setdown:
 
-    cabal run -- --help
-    cabal run mydefinitions.setdown
+    cabal run setdown -- --help
+    cabal run setdown -- mydefinitions.setdown
 
 That is all that there is to it!
 
