@@ -53,8 +53,8 @@ options = Options
       &= help "The directory in which to place the output contents. Relative to your .setdown file."
       &= opt "output"
    , setdownFile = def
-      &= explicit
       &= name "input"
+      &= explicit
       &= help "The setdown definition file that contains all of the set operations that should be performed."
       &= typ "definitions.setdown"
    , showTransient = def
@@ -115,6 +115,7 @@ main = do
 
    inputFilePath <- getInputFileOrFail (setdownFile opts)
    putStrLn $ "==> Using setdown file: " ++ inputFilePath
+   printNewline
 
    -- Todo work out the parent directory of the setdown file
    putStrLn "==> Creating the environment..."
@@ -125,28 +126,28 @@ main = do
                   , cOutputDir = baseDir </> fromMaybe "output" (outputDirectory opts)
                   }
 
-   putStrLn $ "Base Directory: " ++ cBaseDir context
-   putStrLn $ "Output Directory: " ++ cOutputDir context
+   putStrLn $ "  Base Directory: " ++ cBaseDir context
+   putStrLn $ "  Output Directory: " ++ cOutputDir context
    prepareContext context
    printNewline
 
    setData <- parse <$> (B.readFile inputFilePath)
    putStrLn "==> Parsed original definitions..."
    printDefinitions setData
-   -- Step 0: Verify that the definitions are well defined and that the referenced files exist
-   -- relative to the file that we pass in.
    printNewline
 
+   -- Step 0: Verify that the definitions are well defined and that the referenced files exist
+   -- relative to the file that we pass in.
    putStrLn "==> Verification (Ensuring correctness in the set definitions file)"
    case duplicateDefinitionName setData of
-      [] -> putStrLn "OK: No duplicate definitions found."
+      [] -> putStrLn "  OK: No duplicate definitions found."
       xs -> do
          putStrLn "[Error 11] Duplicate definitions found:"
          mapM_ T.putStrLn xs
          exitWith (ExitFailure 11)
 
    case unknownIdentifier setData of
-      [] -> putStrLn "OK: No unknown identifiers found."
+      [] -> putStrLn "  OK: No unknown identifiers found."
       xs -> do
          putStrLn "[Error 12] Unknown identifiers used in the set descriptor file:"
          mapM_ T.putStrLn xs
@@ -157,7 +158,7 @@ main = do
       putStrLn "[Error 13] the following files could not be found:"
       forM_ allFiles (\fp -> putStrLn $ " - " ++ fp)
       exitWith (ExitFailure 13)
-   putStrLn "OK: All files in the definitions could be found."
+   putStrLn "  OK: All files in the definitions could be found."
    printNewline
 
    putStr "==> Simplifying and eliminating duplicates from set definitions..."
@@ -180,7 +181,7 @@ main = do
       putStrLn "We found the following cycles:"
       printCycles cycles
       exitWith (ExitFailure 20)
-   putStrLn "OK: No cycles were found in the definitions."
+   putStrLn "  OK: No cycles were found in the definitions."
    printNewline
 
    putStrLn "==> Copying and Sorting all input files from the definitions..."
@@ -192,7 +193,7 @@ main = do
    printTabularResults sortedFiles
    printNewline
 
-   putStrLn "==> Computing set operations between the files..."
+   putStrLn "==> Setdown results"
    -- Step 2: Calculate the graph of everything that needs to be computed and compute things one at
    -- a time. Even make sure that you store the temporary results along the way. That way we can
    -- refer to them later if the same computation is made twice. We should certainly memoize with
