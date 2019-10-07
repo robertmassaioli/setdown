@@ -163,7 +163,7 @@ main = do
 
    putStr "==> Simplifying and eliminating duplicates from set definitions..."
    let simpleSetData = eliminateDuplicates . orderDefinitions . complexToSimpleDefinitions $ setData
-   if showTransient opts 
+   if showTransient opts
       then do
          putStrLn "DONE:"
          printSimpleDefinitions simpleSetData
@@ -184,7 +184,7 @@ main = do
    putStrLn "  OK: No cycles were found in the definitions."
    printNewline
 
-   putStrLn "==> Copying and Sorting all input files from the definitions..."
+   putStrLn "==> Sorting and de-duplicated input files from the definitions..."
    -- Step 1: For every unique file, sort it (Use external sort for this purpose:
    -- https://hackage.haskell.org/package/external-sort-0.2/docs/Algorithms-ExternalSort.html add
    -- docs to that library if at all possible)
@@ -238,7 +238,7 @@ printTabularResults fileMapping = sequence_ . fmap putStrLn $ Tab.tableLines col
    where
       headers = Tab.titlesH ["From", "To"]
 
-      columns = 
+      columns =
          [ Tab.column Tab.expand Tab.left Tab.noAlign Tab.noCutMark
          , Tab.column Tab.expand Tab.left Tab.noAlign Tab.noCutMark
          ]

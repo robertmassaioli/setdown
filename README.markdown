@@ -34,11 +34,8 @@ read the sections below.
 ### Input Files
 
 In setdown *each file is treated as a list of elements where each line
-is an element*. You may have thought that each file would be treated as a Set of elements (no
-duplicate lines). But I decided not to make this a requirement, this is because I don't assume that
-you will give us sorted input with no duplicates or that it will be easy for you to do so. Instead
-you can give us any file that you like and the first thing that setdown will do to those files is
-sort them and remove duplicates; essentially turning them into sets.
+is an element*. Input files do not need to begin as sets; they can contain duplicate and unsorted
+elements. Setdown will automatically sort and de-duplicate all input files, turning them into sets.
 
 Another important point is that of relativity: specifically, if have a **.setdown** file that
 references the input file "some-elements.txt" and I run the setdown executable from a directory that
