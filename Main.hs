@@ -3,11 +3,15 @@ module Main where
 
 import qualified Data.ByteString.Lazy   as B
 import qualified Data.Set               as S
+
+import qualified Data.Text.Lazy         as LT
 import qualified Data.Text.Lazy.IO      as T
+import qualified Text.Layout.Table      as Tab
 import           System.Console.CmdArgs
 import           System.Exit
 
 import           Control.Monad          (filterM, forM_, unless)
+import           Control.Arrow          (first)
 import           Data.List              (intersperse, isSuffixOf, partition)
 import           Data.Maybe             (fromMaybe)
 
@@ -37,6 +41,7 @@ import           System.FilePath        (dropFileName, (</>))
 data Options = Options
    { outputDirectory :: Maybe FilePath
    , setdownFile     :: Maybe FilePath
+   , showTransient   :: Bool
    } deriving (Show, Data, Typeable)
 
 options :: Options
@@ -52,6 +57,11 @@ options = Options
       &= name "input"
       &= help "The setdown definition file that contains all of the set operations that should be performed."
       &= typ "definitions.setdown"
+   , showTransient = def
+      &= explicit
+      &= name "show-transient"
+      &= help "Show the simple and transient definitions that are generated for your setdown file and their intermediate results."
+      &= typ "false"
    }
    &= program "setdown"
    &= summary "setdown allows you to perform set operations on multiple files efficiently using an intuitive language."
@@ -152,9 +162,14 @@ main = do
 
    putStr "==> Simplifying and eliminating duplicates from set definitions..."
    let simpleSetData = eliminateDuplicates . orderDefinitions . complexToSimpleDefinitions $ setData
-   putStrLn "DONE:"
-   printSimpleDefinitions simpleSetData
-   printNewline
+   if showTransient opts 
+      then do
+         putStrLn "DONE:"
+         printSimpleDefinitions simpleSetData
+         printNewline
+      else do
+         putStrLn "DONE!"
+         printNewline
 
    putStr "==> Checking for cycles in the simplified definitions..."
    let cycles = getCyclesInSimpleDefinitions simpleSetData
@@ -174,7 +189,7 @@ main = do
    -- docs to that library if at all possible)
    -- TODO use file timestamps to not sort these big files more than once if possible
    sortedFiles <- extractAndSortFiles context (S.toList . extractFilenamesFromDefinitions $ setData) -- TODO use the simple set data here
-   printSortResults sortedFiles
+   printTabularResults sortedFiles
    printNewline
 
    putStrLn "==> Computing set operations between the files..."
@@ -186,7 +201,7 @@ main = do
    computedFiles <- runSimpleDefinitions context simpleSetData sortedFiles
    -- Step 3: Print out the final statistics with the defitions pointing to how many elements that
    -- each contained and where to find their output files.
-   printComputedResults computedFiles
+   printComputedResults opts computedFiles
 
 filesNotFound :: [FilePath] -> IO [FilePath]
 filesNotFound = filterM (\x -> not <$> doesFileExist x)
@@ -217,18 +232,32 @@ printSortResult (unsortedFile, sortedFile) = do
    where
       wrapInQuotes x = "\"" ++ x ++ "\""
 
-printComputedResults :: [(SimpleDefinition, FilePath)] -> IO ()
-printComputedResults results = do
-   unless (null tempResults) $ do
+printTabularResults :: [(FilePath, FilePath)] -> IO ()
+printTabularResults fileMapping = sequence_ . fmap putStrLn $ Tab.tableLines columns Tab.unicodeBoldHeaderS headers rows
+   where
+      headers = Tab.titlesH ["From", "To"]
+
+      columns = 
+         [ Tab.column Tab.expand Tab.left Tab.noAlign Tab.noCutMark
+         , Tab.column Tab.expand Tab.left Tab.noAlign Tab.noCutMark
+         ]
+
+      rows = [Tab.rowsG $ fmap (\(from, to) -> [from, to]) fileMapping]
+
+printComputedResults :: Options -> [(SimpleDefinition, FilePath)] -> IO ()
+printComputedResults opts results = do
+   unless (null tempResults || not (showTransient opts)) $ do
       putStrLn "Transient results:"
-      printResults tempResults
+      printTabularResults . fmap (first (LT.unpack . getIdentifier)) $ tempResults
       printNewline
    unless (null retainResults) $ do
-      putStrLn "Required results:"
-      printResults retainResults
+      unless (not (showTransient opts)) $ putStrLn "Required results:"
+      printTabularResults . fmap (first (LT.unpack . getIdentifier)) $ retainResults
    where
       (retainResults, tempResults) = partition (sdRetain . fst) results
-      printResults = sequence_ . intersperse printNewline . fmap printComputedResult
+      --printResults = sequence_ . intersperse printNewline . fmap printComputedResult
+      getIdentifier (SimpleDefinition ident _ _) = ident
+
 
 printComputedResult :: (SimpleDefinition, FilePath) -> IO ()
 printComputedResult (SimpleDefinition ident _ _, fp) = do

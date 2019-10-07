@@ -95,6 +95,7 @@ executable setdown
                        , split         == 0.2.*
                        , mtl           == 2.2.*
                        , cmdargs       >= 0.10
+                       , table-layout  >= 0.8
 
   build-tools:         alex, happy
 
