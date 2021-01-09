@@ -5,6 +5,15 @@ Created in: 2015
 
 ## Installation Steps
 
+The easiest way to use this page is to use [nix-shell][8] to run it locally:
+
+``` shell
+$ nix-shell -p haskellPackages.setdown
+$ setdown --help
+```
+
+You can see the [latest build on NixOS here][9].
+
 If you just want to install setdown then you just need to make sure that you have Haskell and Cabal
 installed and then:
 
@@ -168,3 +177,5 @@ process just follow it because it is designed to make your life, and my life, ea
  [5]: https://www.haskell.org/cabal/
  [6]: https://robertmassaioli.wordpress.com/
  [7]: http://hackage.haskell.org/package/setdown
+ [8]: https://nixos.org/manual/nix/unstable/command-ref/nix-shell.html
+ [9]: http://hydra.nixos.org/job/nixpkgs/trunk/haskellPackages.setdown.x86_64-linux
