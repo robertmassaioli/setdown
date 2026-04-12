@@ -1,25 +1,34 @@
 # Setdown - Line based set manipulation
 
-Author: [Robert Massaioli][6]  
-Created in: 2015  
+**Version:** 0.1.1.0 | [Hackage][7]
 
-## Installation Steps
+Author: [Robert Massaioli][6]
+Created in: 2015
 
-The easiest way to use this page is to use [nix-shell][8] to run it locally:
+## Installation
+
+### Via nix-shell (quickest, no local setup required)
 
 ``` shell
 $ nix-shell -p haskellPackages.setdown
 $ setdown --help
 ```
 
-You can see the [latest build on NixOS here][9].
+### Via Hackage
 
-If you just want to install setdown then you just need to make sure that you have Haskell and Cabal
-installed and then:
+If you have Stack installed:
 
-    cabal install setdown
+``` shell
+stack install setdown
+```
 
-This works because [setdown is on hackage][7]!
+Or with Cabal:
+
+``` shell
+cabal install setdown
+```
+
+Both work because [setdown is on Hackage][7].
 
 ## What is setdown and how does it work?
 
@@ -28,10 +37,12 @@ definitions file" often suffixed with **.setdown**. If you are familiar with [Ma
 of this **.setdown** file much like a Makefile. Inside that file you write a number of
 definitions of the form:
 
-    definitionName: "file-1.txt" /\ "file-2.txt"
+``` setdown
+definitionName: "file-1.txt" /\ "file-2.txt"
+```
 
 This line says that "definitionName" is a new set definition that is a label for the intersection of
-"file-1.txt" and "file-2.txt". You can write more complicated expressions that this.
+"file-1.txt" and "file-2.txt". You can write more complicated expressions than this.
 
 ### Example Setdown Projects
 
@@ -46,119 +57,214 @@ In setdown *each file is treated as a list of elements where each line
 is an element*. Input files do not need to begin as sets; they can contain duplicate and unsorted
 elements. Setdown will automatically sort and de-duplicate all input files, turning them into sets.
 
-Another important point is that of relativity: specifically, if have a **.setdown** file that
-references the input file "some-elements.txt" and I run the setdown executable from a directory that
-is not the same directory as the **.setdown** file then where will setdown look for the
-some-elements.txt file? The answer is that we always look for files relative to the **.setdown**
+Another important point is that of relativity: specifically, if you have a **.setdown** file that
+references the input file "some-elements.txt" and you run the setdown executable from a directory that
+is not the same directory as the **.setdown** file, where will setdown look for
+some-elements.txt? The answer is that setdown always looks for files relative to the **.setdown**
 file. That is where you wrote your definitions so the paths are relative to that. It was designed in
 this way so that you could run setdown from anywhere in the directory tree and still get the same
-result. It was an important design of setdown that you always get the same result every time that you run it.
-Setdown has been designed to be current working directory invariant, as opposed to many
+result. Setdown has been designed to be current working directory invariant, as opposed to many
 other command line programs. Please keep this in mind.
 
-### Set Operations and Precidence
+### Output
+
+When setdown runs, it creates an `output/` directory next to your **.setdown** file. Each named
+definition produces a result file in that directory. The result files are named with a UUID and
+contain one element per line, sorted and de-duplicated.
+
+Progress and status messages are written to stdout as setdown works through your definitions. At
+the end of a successful run, a summary table is printed showing each definition name alongside the
+path to its result file.
+
+You can choose a different output directory with the `--output` flag:
+
+``` shell
+setdown --output=results mydefinitions.setdown
+```
+
+The path given to `--output` is relative to the **.setdown** file, not the current working
+directory.
+
+### Set Operations and Precedence
 
 In the setdown language there are a number of supported operators:
 
- - Intersection: /\
- - Union: \/
- - Difference: -
+ - Intersection: `/\`
+ - Union: `\/`
+ - Difference: `-`
 
 For example, they might be used in the following way:
 
-    definition: (A - B) \/ (C /\ D)
+``` setdown
+definition: (A - B) \/ (C /\ D)
+```
 
-You may be wondering what [operator precidence][1] the setdown language uses and the answer is:
-there is no operator precidence at all, instead *you must clearly specify the precidence of nested
+You may be wondering what [operator precedence][1] the setdown language uses and the answer is:
+there is no operator precedence at all, instead *you must clearly specify the precedence of nested
 expressions with brackets*. This is very important because it will result in parsing errors
 otherwise. To explain the reasoning for explicit operator precedence:
 
-    -- Here is a simple expression
-    def: A /\ B \/ C
-    -- Now, should this be parsed as:
-    defV1: (A /\ B) \/ C
-    -- or as:
-    defV2: A /\ (B \/ C)
-    -- If you pretend that B is the empty set (E) then you can see that these expression evaluate
-    -- completely differently. If we simplify them with that assumption then they become:
-    defV1-bempty: E
-    defV2-bempty: A /\ C
+``` setdown
+-- Here is a simple expression
+def: A /\ B \/ C
+-- Now, should this be parsed as:
+defV1: (A /\ B) \/ C
+-- or as:
+defV2: A /\ (B \/ C)
+-- If you pretend that B is the empty set (E) then you can see that these expressions evaluate
+-- completely differently. If we simplify them with that assumption then they become:
+defV1-bempty: E
+defV2-bempty: A /\ C
+```
 
 So as you can see, order of operations really matters for set operations. Because it is so critical
 the use of brackets is mandatory.
 
 ### Comments
 
-In the setdown language you can add comments by writing a double-dash (--) and then writing the
-comment till the end of the line. The following comments are valid:
+In the setdown language you can add comments by writing a double-dash (`--`) and then writing the
+comment to the end of the line. Comments can appear anywhere on a line — at the start, or inline
+after an expression.
 
-    -- This is a definition for A, created because we wanted to do X
-    A: "y.txt" - "z.txt"
+``` setdown
+-- This is a definition for A, created because we wanted to do X
+A: "y.txt" - "z.txt"
 
-    -- This is an example of a comment halfway through an expression
-    B: (A \/ C) -- \/ D This is still a comment and \/ D never happens
+-- This is an example of a comment halfway through an expression
+B: (A \/ C) -- \/ D   This is still a comment and \/ D never happens
+```
 
 You can use comments to leave messages for any people that might read your setdown definitions in
-the future. It may help explain to them what you were trying to do.
+the future.
+
+### Language Reference
+
+#### Identifier rules
+
+Definition names (identifiers) may contain letters (upper and lowercase), digits, hyphens, and
+underscores:
+
+```
+[a-zA-Z0-9_-]+
+```
+
+For example, `mySet`, `result-2`, and `Final_Output` are all valid identifiers. Spaces and
+punctuation other than `-` and `_` are not permitted.
+
+#### Definition ordering
+
+Definitions may appear in any order in your **.setdown** file. A definition may reference another
+that is defined later in the file. Setdown resolves all identifiers by name after parsing the
+complete file.
+
+#### Circular definitions
+
+Definitions must not form a cycle. For example:
+
+``` setdown
+A: "file.txt" \/ B
+B: A /\ "other.txt"
+```
+
+This is invalid because `A` depends on `B` and `B` depends on `A`. Setdown detects cycles and
+exits with an error before performing any operations.
 
 ### Writing your own definitions
 
 In the setdown language you can write a definition in the following format:
 
-     <definitionName>: <expression>
+``` setdown
+<definitionName>: <expression>
+```
 
 Where the definition name is the identifier that you give to that expression. An expression is the
 application of set operations on identifiers or files. A practical example of what this looks like
 should help cement what this means. Here is a valid setdown file:
 
-    -- A is the intersection of the file b-1.out and the set B
-    A: "b-1.out" /\ B
+``` setdown
+-- A is the intersection of the file b-1.out and the set B
+A: "b-1.out" /\ B
 
-    -- B is the union of the file a-1.out and a-2.out
-    B: "a-1.out" \/ "a-2.out"
+-- B is the union of the file a-1.out and a-2.out
+B: "a-1.out" \/ "a-2.out"
 
-    -- C is the difference of the file b-1.out and the set B
-    C: "b-1.out" - B
+-- C is the difference of the file b-1.out and the set B
+C: "b-1.out" - B
+```
 
 Usually, when you write these definitions you put them in a file that has a suffix of **.setdown**.
 You can then feed this file into the setdown executable like so:
 
-    setdown path/to/mydefinitions.setdown
+``` shell
+setdown path/to/mydefinitions.setdown
+```
 
-For more information on the options that you can pass to the setdown executable try running
+### Command-line flags
 
-    setdown --help
+``` text
+setdown allows you to perform set operations on multiple files efficiently
+using an intuitive language.
 
-And good luck!
+setdown [OPTIONS]
+
+Common flags:
+     --output[=DIR]               The directory in which to place the output
+                                  contents. Relative to your .setdown file.
+     --input=definitions.setdown  The setdown definition file that contains
+                                  all of the set operations that should be
+                                  performed.
+     --show-transient             Show the simple and transient definitions
+                                  that are generated for your setdown file
+                                  and their intermediate results.
+  -? --help                       Display help message
+  -V --version                    Print version information
+```
+
+If `--input` is omitted, setdown looks for a single **.setdown** file in the current directory and
+uses it automatically. If zero or more than one are found, setdown exits with an error.
 
 ## Building the code
 
 To build the code for this project, have [Stack][10] installed and then:
 
-    stack build
+``` shell
+stack build
+```
 
 To run setdown during development:
 
-    stack exec -- setdown --help
-    stack exec -- setdown mydefinitions.setdown
+``` shell
+stack exec -- setdown --help
+stack exec -- setdown mydefinitions.setdown
+```
 
-That is all that there is to it!
+## Troubleshooting
+
+Setdown prints a short error message to stdout and exits with a non-zero code when something goes
+wrong. The error codes are:
+
+| Exit code | Cause |
+|-----------|-------|
+| 1 | The file specified with `--input` does not exist. |
+| 2 | Multiple **.setdown** files found in the current directory; use `--input` to select one. |
+| 3 | No **.setdown** files found in the current directory; use `--input` to specify one. |
+| 11 | Two or more definitions share the same name. |
+| 12 | A definition references an identifier that has not been defined. |
+| 13 | One or more input files referenced in the definitions could not be found. |
+| 20 | A cyclic dependency was detected between definitions. |
+
+All file paths in error messages are relative to the **.setdown** file, not the current working
+directory.
 
 ## Contributing to the setdown project
 
-If you wish to contribute to the setdown project then please just:
+Contributions are welcome. The preferred workflow is:
 
- 1. Raise an issue with what you intend to fix / improve.
- 1. Wait for Robert Massioli to get back to you and give you the thumbs up. If you get Robert
-    Massaioli's "merge approval" then that means that, if you write the code to Roberts satisfaction
-    then it will be merged in.
- 1. Write the code.
- 1. Raise a PR and ask Robert Massaioli to review it. (Maybe iterate a bit to get it cleaned up)
- 1. Get it merged in.
- 1. Celebrate!
-
-I would love to have contributions to the project and, even though it may look like a complicated
-process just follow it because it is designed to make your life, and my life, easier. Cheers!
+ 1. Open an issue describing what you intend to fix or improve.
+ 2. Write the code.
+ 3. Open a pull request and ask Robert Massaioli to review it.
+ 4. Iterate until the code is clean and merged.
+ 5. Celebrate!
 
  [1]: http://en.wikipedia.org/wiki/Order_of_operations
  [2]: https://bitbucket.org/robertmassaioli/setdown-examples
@@ -166,5 +272,4 @@ process just follow it because it is designed to make your life, and my life, ea
  [6]: https://robertmassaioli.wordpress.com/
  [7]: http://hackage.haskell.org/package/setdown
  [8]: https://nixos.org/manual/nix/unstable/command-ref/nix-shell.html
- [9]: http://hydra.nixos.org/job/nixpkgs/trunk/haskellPackages.setdown.x86_64-linux
  [10]: https://docs.haskellstack.org/en/stable/
