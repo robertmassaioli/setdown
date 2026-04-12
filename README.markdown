@@ -269,7 +269,7 @@ Contributions are welcome. The preferred workflow is:
  [1]: http://en.wikipedia.org/wiki/Order_of_operations
  [2]: https://bitbucket.org/robertmassaioli/setdown-examples
  [3]: http://www.gnu.org/software/make/
- [6]: https://robertmassaioli.wordpress.com/
+ [6]: https://github.com/robertmassaioli
  [7]: http://hackage.haskell.org/package/setdown
  [8]: https://nixos.org/manual/nix/unstable/command-ref/nix-shell.html
  [10]: https://docs.haskellstack.org/en/stable/
