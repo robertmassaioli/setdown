@@ -1,6 +1,6 @@
 # Setdown - Line based set manipulation
 
-**Version:** 0.1.1.0 | [Hackage][7]
+**Version:** 0.1.2.0 | [Hackage][7]
 
 Author: [Robert Massaioli][6]
 Created in: 2015
