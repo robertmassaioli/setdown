@@ -234,7 +234,7 @@ printSortResult (unsortedFile, sortedFile) = do
       wrapInQuotes x = "\"" ++ x ++ "\""
 
 printTabularResults :: [(FilePath, FilePath)] -> IO ()
-printTabularResults fileMapping = sequence_ . fmap putStrLn $ Tab.tableLines columns Tab.unicodeBoldHeaderS headers rows
+printTabularResults fileMapping = sequence_ . fmap putStrLn $ Tab.tableLines (Tab.columnHeaderTableS columns Tab.unicodeBoldHeaderS headers rows)
    where
       headers = Tab.titlesH ["From", "To"]
 

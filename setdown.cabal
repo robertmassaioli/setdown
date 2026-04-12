@@ -90,10 +90,10 @@ executable setdown
                        -- Module Dependencies
                        , filepath      >= 1.2 && < 3
                        , directory     >= 1.1 && < 3
-                       , containers    == 0.6.*
-                       , uuid          == 1.3.*
+                       , containers    >= 0.6
+                       , uuid          >= 1.3
                        , split         == 0.2.*
-                       , mtl           == 2.2.*
+                       , mtl           >= 2.2
                        , cmdargs       >= 0.10
                        , table-layout  >= 0.8
 
