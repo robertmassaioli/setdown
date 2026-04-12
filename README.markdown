@@ -133,26 +133,16 @@ And good luck!
 
 ## Building the code
 
-To build the code for this project just have [Haskell installed][4] and [cabal][5] and then:
+To build the code for this project, have [Stack][10] installed and then:
 
-    cabal new-install
+    stack build
 
-And that should have the code built on your machine. Then, if you modify the code, just use cabal run to run setdown:
+To run setdown during development:
 
-    cabal run setdown -- --help
-    cabal run setdown -- mydefinitions.setdown
+    stack exec -- setdown --help
+    stack exec -- setdown mydefinitions.setdown
 
 That is all that there is to it!
-
-### With nix for local development
-
-If you want to install setdown locally using nix for local development then do the following:
-
-    $ nix-shell
-    $ cabal sandbox init
-    $ cabal install
-
-That should install setdown in development mode locally.  
 
 ## Contributing to the setdown project
 
@@ -173,9 +163,8 @@ process just follow it because it is designed to make your life, and my life, ea
  [1]: http://en.wikipedia.org/wiki/Order_of_operations
  [2]: https://bitbucket.org/robertmassaioli/setdown-examples
  [3]: http://www.gnu.org/software/make/
- [4]: https://www.haskell.org/platform/
- [5]: https://www.haskell.org/cabal/
  [6]: https://robertmassaioli.wordpress.com/
  [7]: http://hackage.haskell.org/package/setdown
  [8]: https://nixos.org/manual/nix/unstable/command-ref/nix-shell.html
  [9]: http://hydra.nixos.org/job/nixpkgs/trunk/haskellPackages.setdown.x86_64-linux
+ [10]: https://docs.haskellstack.org/en/stable/
