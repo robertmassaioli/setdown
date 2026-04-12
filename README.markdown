@@ -16,19 +16,11 @@ $ setdown --help
 
 ### Via Hackage
 
-If you have Stack installed:
-
 ``` shell
 stack install setdown
 ```
 
-Or with Cabal:
-
-``` shell
-cabal install setdown
-```
-
-Both work because [setdown is on Hackage][7].
+This works because [setdown is on Hackage][7].
 
 ## What is setdown and how does it work?
 
