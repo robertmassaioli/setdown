@@ -24,13 +24,15 @@ updateWithDuplicates ds sds = S.toList $ foldr updateWithDuplicate (S.fromList s
 -- of the other dupes with it
 updateWithDuplicate :: Duplicates -> S.Set SimpleDefinition -> S.Set SimpleDefinition
 updateWithDuplicate (Duplicates [] []) sds = sds
-updateWithDuplicate dupes sds = S.insert retainDupe cleanedDefs
-   where
-      cleanedDefs = S.map (replaceIds newId oldIds) remainingDefs
-      remainingDefs = sds S.\\ S.fromList discardDupes
-      newId = sdId retainDupe
-      oldIds = S.fromList . fmap sdId $ discardDupes
-      (retainDupe : discardDupes) = dupRetain dupes ++ dupDiscontinue dupes
+updateWithDuplicate dupes sds =
+   case dupRetain dupes ++ dupDiscontinue dupes of
+      [] -> sds
+      (retainDupe : discardDupes) ->
+         let newId       = sdId retainDupe
+             oldIds      = S.fromList (fmap sdId discardDupes)
+             remainingDefs = sds S.\\ S.fromList discardDupes
+             cleanedDefs = S.map (replaceIds newId oldIds) remainingDefs
+         in S.insert retainDupe cleanedDefs
 
 replaceIds :: Identifier -> S.Set Identifier -> SimpleDefinition -> SimpleDefinition
 replaceIds newId oldIds (SimpleDefinition ident expr retain) = SimpleDefinition ident (replaceIdsInExpression newId oldIds expr) retain

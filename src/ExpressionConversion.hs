@@ -54,9 +54,12 @@ defFromExpression se@(SimpleBinaryExpression {}) = do
 getIdThenIncrement :: ConvState Identifier
 getIdThenIncrement = do
    original <- get
-   let (intId, ident) = head . filter (\x -> snd x `S.notMember` tsUsedIds original) . fmap withId . thisAndFurther . tsCount $ original
-   put $ original { tsCount = intId + 1 }
-   return ident
+   let candidates = filter (\x -> snd x `S.notMember` tsUsedIds original) . fmap withId . thisAndFurther . tsCount $ original
+   case candidates of
+      (intId, ident) : _ -> do
+         put $ original { tsCount = intId + 1 }
+         return ident
+      [] -> error "getIdThenIncrement: no available identifier (impossible: filtered from infinite sequence)"
 
 withId :: Integer -> (Integer, Identifier)
 withId x = (x, integerToId x)
