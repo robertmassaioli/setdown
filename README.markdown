@@ -194,26 +194,28 @@ setdown path/to/mydefinitions.setdown
 ### Command-line flags
 
 ``` text
-setdown allows you to perform set operations on multiple files efficiently
-using an intuitive language.
+setdown evaluates a .setdown definitions file to perform set operations
+(intersection, union, difference) on line-based text files, writing one result
+file per definition to an output directory.
 
 setdown [OPTIONS]
 
 Common flags:
-     --output[=DIR]               The directory in which to place the output
-                                  contents. Relative to your .setdown file.
-     --input=definitions.setdown  The setdown definition file that contains
-                                  all of the set operations that should be
-                                  performed.
-     --show-transient             Show the simple and transient definitions
-                                  that are generated for your setdown file
-                                  and their intermediate results.
+  -o --output[=DIR]               Directory in which to place output files,
+                                  relative to your .setdown file. Defaults to
+                                  'output' if omitted.
+  -i --input=definitions.setdown  The .setdown definitions file to evaluate.
+                                  If omitted, setdown looks for a single
+                                  .setdown file in the current directory and
+                                  uses it automatically. Exits with an error if
+                                  zero or more than one are found.
+     --show-transient             Also show intermediate results for
+                                  sub-expressions generated internally to
+                                  evaluate your definitions. Useful for
+                                  debugging complex .setdown files.
   -? --help                       Display help message
   -V --version                    Print version information
 ```
-
-If `--input` is omitted, setdown looks for a single **.setdown** file in the current directory and
-uses it automatically. If zero or more than one are found, setdown exits with an error.
 
 ## Building the code
 

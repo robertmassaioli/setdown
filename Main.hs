@@ -49,22 +49,23 @@ options = Options
    { outputDirectory = def
       &= explicit
       &= name "output"
+      &= name "o"
       &= typDir
-      &= help "The directory in which to place the output contents. Relative to your .setdown file."
+      &= help "Directory in which to place output files, relative to your .setdown file. Defaults to 'output' if omitted."
       &= opt "output"
    , setdownFile = def
       &= name "input"
+      &= name "i"
       &= explicit
-      &= help "The setdown definition file that contains all of the set operations that should be performed."
+      &= help "The .setdown definitions file to evaluate. If omitted, setdown looks for a single .setdown file in the current directory and uses it automatically. Exits with an error if zero or more than one are found."
       &= typ "definitions.setdown"
    , showTransient = def
       &= explicit
       &= name "show-transient"
-      &= help "Show the simple and transient definitions that are generated for your setdown file and their intermediate results."
-      &= typ "false"
+      &= help "Also show intermediate results for sub-expressions generated internally to evaluate your definitions. Useful for debugging complex .setdown files."
    }
    &= program "setdown"
-   &= summary "setdown allows you to perform set operations on multiple files efficiently using an intuitive language."
+   &= summary "setdown evaluates a .setdown definitions file to perform set operations (intersection, union, difference) on line-based text files, writing one result file per definition to an output directory."
 
 data GuessError
   = NoMatchingFiles
