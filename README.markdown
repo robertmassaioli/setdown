@@ -1,6 +1,6 @@
 # Setdown - Line based set manipulation
 
-**Version:** 0.1.2.0 | [Hackage][7]
+**Version:** 0.1.3.0 | [Hackage][7]
 
 Author: [Robert Massaioli][6]
 Created in: 2015
@@ -61,12 +61,13 @@ other command line programs. Please keep this in mind.
 ### Output
 
 When setdown runs, it creates an `output/` directory next to your **.setdown** file. Each named
-definition produces a result file in that directory. The result files are named with a UUID and
-contain one element per line, sorted and de-duplicated.
+definition produces a result file in that directory named after the definition with a `.txt`
+extension — for example, a definition called `Overlap` produces `output/Overlap.txt`. The file
+contains one element per line, sorted and de-duplicated.
 
 Progress and status messages are written to stdout as setdown works through your definitions. At
-the end of a successful run, a summary table is printed showing each definition name alongside the
-path to its result file.
+the end of a successful run, a summary table is printed showing each definition name, the path to
+its result file, and the number of elements it contains.
 
 You can choose a different output directory with the `--output` flag:
 
@@ -81,14 +82,25 @@ directory.
 
 In the setdown language there are a number of supported operators:
 
- - Intersection: `/\`
- - Union: `\/`
- - Difference: `-`
+| Operator | ASCII | Unicode |
+|----------|-------|---------|
+| Intersection | `/\` | `∩` |
+| Union | `\/` | `∪` |
+| Difference | `-` | |
+| Symmetric difference | `><` | `△` |
+
+Intersection, union, and symmetric difference are commutative (`A op B` is the same as
+`B op A`). Difference is not (`A - B` ≠ `B - A`).
+
+Symmetric difference (`><` or `△`) yields the elements that appear in exactly one of
+the two inputs — those in A but not B, plus those in B but not A. It is equivalent to
+`(A - B) \/ (B - A)` but computed in a single pass.
 
 For example, they might be used in the following way:
 
 ``` setdown
 definition: (A - B) \/ (C /\ D)
+changedSubscribers: "january.txt" >< "february.txt"
 ```
 
 You may be wondering what [operator precedence][1] the setdown language uses and the answer is:
@@ -182,6 +194,9 @@ B: "a-1.out" \/ "a-2.out"
 
 -- C is the difference of the file b-1.out and the set B
 C: "b-1.out" - B
+
+-- D is the symmetric difference of two files (elements in one but not both)
+D: "a-1.out" >< "a-2.out"
 ```
 
 Usually, when you write these definitions you put them in a file that has a suffix of **.setdown**.
@@ -195,8 +210,8 @@ setdown path/to/mydefinitions.setdown
 
 ``` text
 setdown evaluates a .setdown definitions file to perform set operations
-(intersection, union, difference) on line-based text files, writing one result
-file per definition to an output directory.
+(intersection, union, difference, symmetric difference) on line-based text
+files, writing one result file per definition to an output directory.
 
 setdown [OPTIONS]
 
