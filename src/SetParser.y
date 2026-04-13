@@ -4,22 +4,21 @@ module SetParser where
 import SetLanguage
 import qualified Data.Text.Lazy as TL
 -- TODO add precedence of operators
--- TODO The tokens should come with line number information so that we can better pinpoint errors.
 }
 
 %name parseSetLanguage
-%tokentype { SetToken }
+%tokentype { LocatedToken }
 %error { parseError }
 
 %token
-   '('            { LParenTok }
-   ')'            { RParenTok }
-   and            { IntersectionTok }
-   or             { UnionTok }
-   diff           { DifferenceTok }
-   identifierDef  { IdentifierDefinitionTok $$ }
-   identifier     { IdentifierTok $$ }
-   filename       { FilenameTok $$ }
+   '('            { LocatedToken _ LParenTok }
+   ')'            { LocatedToken _ RParenTok }
+   and            { LocatedToken _ IntersectionTok }
+   or             { LocatedToken _ UnionTok }
+   diff           { LocatedToken _ DifferenceTok }
+   identifierDef  { LocatedToken _ (IdentifierDefinitionTok $$) }
+   identifier     { LocatedToken _ (IdentifierTok $$) }
+   filename       { LocatedToken _ (FilenameTok $$) }
 
 %%
 
@@ -45,8 +44,13 @@ operator : and    { IntersectionOp }
          | diff   { DifferenceOp }
 
 {
-parseError :: [SetToken] -> a
-parseError tokens = error $ "Parse error: " ++ show tokens
+parseError :: [LocatedToken] -> a
+parseError []
+   = error "Parse error: unexpected end of input"
+parseError (LocatedToken (AlexPn _ line col) t : _)
+   = error $ "Parse error at line " ++ show line
+          ++ ", column " ++ show col
+          ++ ": unexpected token " ++ show t
 
 data SetOperator
    = IntersectionOp

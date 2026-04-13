@@ -2,11 +2,12 @@
 {-# OPTIONS_GHC -w #-}
 module SetLanguage where
 
-import qualified Data.Text.Lazy as TL
+import qualified Data.ByteString.Lazy    as ByteString
+import qualified Data.Text.Lazy          as TL
 import qualified Data.Text.Lazy.Encoding as TLE
 }
 
-%wrapper "basic-bytestring"
+%wrapper "posn-bytestring"
 
 $digit = [0-9]
 $nonFilename = [^\\\/\?\%\*\:\|\<\>\ ]
@@ -16,20 +17,18 @@ tokens :-
 
    $white+           ;
    "--".*            ;
-   "("               { const LParenTok }
-   ")"               { const RParenTok }
-   "/\"              { const IntersectionTok }
-   "\/"              { const UnionTok }
-   "∪"               { const UnionTok }
-   "∩"               { const IntersectionTok }
-   "-"               { const DifferenceTok }
-   \"[^\"]+\"        { FilenameTok . TL.unpack . TL.init . TL.tail . TLE.decodeUtf8 }
-   $ident+$white*":" { IdentifierDefinitionTok . TL.strip . TL.init . TLE.decodeUtf8 }
-   $ident+           { IdentifierTok . TLE.decodeUtf8 }
+   "("               { tok LParenTok }
+   ")"               { tok RParenTok }
+   "/\"              { tok IntersectionTok }
+   "\/"              { tok UnionTok }
+   "∪"               { tok UnionTok }
+   "∩"               { tok IntersectionTok }
+   "-"               { tok DifferenceTok }
+   \"[^\"]+\"        { \pos bs -> LocatedToken pos (FilenameTok . TL.unpack . TL.init . TL.tail . TLE.decodeUtf8 $ bs) }
+   $ident+$white*":" { \pos bs -> LocatedToken pos (IdentifierDefinitionTok . TL.strip . TL.init . TLE.decodeUtf8 $ bs) }
+   $ident+           { \pos bs -> LocatedToken pos (IdentifierTok . TLE.decodeUtf8 $ bs) }
 
 {
--- TODO include the location in which the token ocurred so that we can give better error messages
--- later in the parsing
 data SetToken
    = FilenameTok FilePath
    | IdentifierDefinitionTok TL.Text
@@ -40,4 +39,9 @@ data SetToken
    | LParenTok
    | RParenTok
    deriving(Show, Eq)
+
+data LocatedToken = LocatedToken AlexPosn SetToken deriving (Show, Eq)
+
+tok :: SetToken -> AlexPosn -> ByteString.ByteString -> LocatedToken
+tok t pos _ = LocatedToken pos t
 }

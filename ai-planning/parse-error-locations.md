@@ -255,15 +255,17 @@ Union:   "users-a.txt" \/ "users-b.txt"
 
 ```
 setdown: Parse error: [IntersectionTok,FilenameTok "users-b.txt",IdentifierDefinitionTok "Union",FilenameTok "users-a.txt",UnionTok,FilenameTok "users-b.txt"]
-CallStack (from HasCallStack):
-  error, called at src/SetParser.y:49:18 in ...
 ```
 
 **Output after this proposal:**
 
 ```
-setdown: Parse error at line 3, column 23: unexpected token IntersectionTok
+setdown: Parse error at line 5, column 27: unexpected token IntersectionTok
 ```
+
+Line 5 because the `Overlap` definition appears after four comment lines. Column 27 is
+where the second `/\` begins within that line. Both figures are confirmed by running
+against the actual example file.
 
 The example directory also includes the referenced data files so that setdown reaches the
 parse stage rather than failing earlier at file-not-found verification.
