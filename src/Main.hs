@@ -1,3 +1,4 @@
+{-# LANGUAGE CPP                #-}
 {-# LANGUAGE DeriveDataTypeable #-}
 module Main where
 
@@ -10,7 +11,7 @@ import qualified Text.Layout.Table      as Tab
 import           System.Console.CmdArgs
 import           System.Exit
 
-import           Control.Monad          (filterM, forM_, unless)
+import           Control.Monad          (filterM, forM_, unless, when)
 import           Control.Arrow          (first)
 import           Data.List              (intersperse, isSuffixOf, partition)
 import           Data.Maybe             (fromMaybe)
@@ -29,8 +30,12 @@ import           PerformOperations
 import           SimpleDefinitionCycles
 
 import           System.Directory       (doesFileExist, getCurrentDirectory,
-                                         listDirectory)
+                                         listDirectory, removeFile)
 import           System.FilePath        (dropFileName, (</>))
+
+#ifndef mingw32_HOST_OS
+import           System.Posix.Files     (createLink)
+#endif
 
 -- Useful for Print Debugging
 -- import Text.Show.Pretty
@@ -201,9 +206,27 @@ main = do
    -- the file system. It would be great if we could print out the results of the computations as we
    -- go.
    computedFiles <- runSimpleDefinitions context simpleSetData sortedFiles
-   -- Step 3: Print out the final statistics with the defitions pointing to how many elements that
+   -- Step 3: Publish retained results under their definition names.
+   publishedFiles <- publishResults context computedFiles
+   -- Step 4: Print out the final statistics with the definitions pointing to how many elements that
    -- each contained and where to find their output files.
-   printComputedResults opts computedFiles
+   printComputedResults opts publishedFiles
+
+publishResults :: Context -> [(SimpleDefinition, FilePath)] -> IO [(SimpleDefinition, FilePath)]
+#ifndef mingw32_HOST_OS
+publishResults ctx results = mapM publish results
+  where
+   publish (sd, src)
+      | sdRetain sd = do
+            let dest = cOutputDir ctx </> LT.unpack (sdId sd) ++ ".txt"
+            destExists <- doesFileExist dest
+            when destExists $ removeFile dest
+            createLink src dest
+            return (sd, dest)
+      | otherwise   = return (sd, src)
+#else
+publishResults _ results = return results
+#endif
 
 filesNotFound :: Context -> [FilePath] -> IO [FilePath]
 filesNotFound ctx = filterM (\x -> not <$> doesFileExist (cBaseDir ctx </> x))
