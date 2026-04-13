@@ -20,8 +20,8 @@ tokens :-
    ")"               { const RParenTok }
    "/\"              { const IntersectionTok }
    "\/"              { const UnionTok }
-   "∪"               { const IntersectionTok }
-   "∩"               { const UnionTok }
+   "∪"               { const UnionTok }
+   "∩"               { const IntersectionTok }
    "-"               { const DifferenceTok }
    \"[^\"]+\"        { FilenameTok . TL.unpack . TL.init . TL.tail . TLE.decodeUtf8 }
    $ident+$white*":" { IdentifierDefinitionTok . TL.strip . TL.init . TLE.decodeUtf8 }
