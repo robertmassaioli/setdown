@@ -24,7 +24,7 @@ This is a one-line fix but has correctness implications for any user relying on 
 
 ---
 
-## 2. Name output files after their definition
+## 2. ~~Name output files after their definition~~ ✓ Done
 
 **File:** `src/PerformOperations.hs`, `src/ExternalSort.hs`
 
@@ -150,7 +150,7 @@ giving immediate regression coverage for the core set operations.
 | # | Suggestion | Effort | Impact |
 |---|-----------|--------|--------|
 | 1 | ~~Fix swapped Unicode operators~~ ✓ Done | Trivial | High — correctness bug |
-| 2 | Name output files after definitions | Small | High — usability |
+| 2 | ~~Name output files after definitions~~ ✓ Done | Small | High — usability |
 | 3 | Line numbers in parse errors | Medium | High — usability |
 | 4 | Element counts in results table | Small | Medium — usability |
 | 5 | Cache sorted inputs with timestamps | Medium | Medium — performance |
