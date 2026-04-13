@@ -1,21 +1,28 @@
 module PrintDefinition
    ( printDefinitions
    , printDefinition
-   , printSimpleDefinitions 
+   , printSimpleDefinitions
    , printSimpleDefinition
    ) where
 
 import SetData
 import Data.List (intersperse)
+import qualified Data.Text.Lazy    as TL
 import qualified Data.Text.Lazy.IO as T
+
+maxAlignWidth :: Int
+maxAlignWidth = 24
 
 -- Complex Definition Printing
 printDefinitions :: Definitions -> IO ()
-printDefinitions = sequence_ . intersperse printNewline . fmap printDefinition 
+printDefinitions defs = sequence_ . intersperse printNewline $ fmap (printDefinition col) defs
+   where
+      col = min maxAlignWidth . maximum $ fmap (\(Definition i _) -> fromIntegral (TL.length i)) defs
 
-printDefinition :: Definition -> IO ()
-printDefinition (Definition ident expression) = do
-   printId ident
+printDefinition :: Int -> Definition -> IO ()
+printDefinition col (Definition ident expression) = do
+   T.putStr ident
+   putStr $ replicate (col - fromIntegral (TL.length ident)) ' '
    putStr ": "
    printExpression expression
    printNewline
@@ -35,11 +42,14 @@ printExpression (BinaryExpression op left right) = do
 
 -- Simple Definition Printing
 printSimpleDefinitions :: SimpleDefinitions -> IO ()
-printSimpleDefinitions = sequence_ . intersperse printNewline . fmap printSimpleDefinition
+printSimpleDefinitions defs = sequence_ . intersperse printNewline $ fmap (printSimpleDefinition col) defs
+   where
+      col = min maxAlignWidth . maximum $ fmap (\(SimpleDefinition i _ _) -> fromIntegral (TL.length i)) defs
 
-printSimpleDefinition :: SimpleDefinition -> IO ()
-printSimpleDefinition (SimpleDefinition ident se _) = do
-   printId ident
+printSimpleDefinition :: Int -> SimpleDefinition -> IO ()
+printSimpleDefinition col (SimpleDefinition ident se _) = do
+   T.putStr ident
+   putStr $ replicate (col - fromIntegral (TL.length ident)) ' '
    putStr ": "
    printSimpleExpression se
    printNewline
@@ -69,8 +79,8 @@ wrapInBrackets printAction = do
    putStr ")"
 
 printOperator :: Operator -> IO ()
-printOperator And          = putStr "/\\"
-printOperator Or           = putStr "\\/"
+printOperator And          = putStr "∩"
+printOperator Or           = putStr "∪"
 printOperator Difference   = putStr "-"
 
 printId :: Identifier -> IO ()
