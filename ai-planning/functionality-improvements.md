@@ -63,7 +63,7 @@ reporting. This is the most impactful usability improvement available in the lan
 
 ---
 
-## 4. Show element counts in the results summary
+## 4. ~~Show element counts in the results summary~~ ✓ Done
 
 **File:** `src/Main.hs`, `printComputedResults`
 
@@ -152,7 +152,7 @@ giving immediate regression coverage for the core set operations.
 | 1 | ~~Fix swapped Unicode operators~~ ✓ Done | Trivial | High — correctness bug |
 | 2 | ~~Name output files after definitions~~ ✓ Done | Small | High — usability |
 | 3 | ~~Line numbers in parse errors~~ ✓ Done | Medium | High — usability |
-| 4 | Element counts in results table | Small | Medium — usability |
+| 4 | ~~Element counts in results table~~ ✓ Done | Small | Medium — usability |
 | 5 | Cache sorted inputs with timestamps | Medium | Medium — performance |
 | 6 | Symmetric difference operator | Medium | Medium — functionality |
 | 7 | Parallelise independent definitions | Large | Medium — performance |
