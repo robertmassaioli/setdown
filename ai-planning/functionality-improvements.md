@@ -43,7 +43,7 @@ final retained definitions could be renamed/copied on completion.
 
 ---
 
-## 3. Add line and column numbers to parse errors
+## 3. ~~Add line and column numbers to parse errors~~ ✓ Done
 
 **File:** `src/SetLanguage.x` (TODO comment at line 31), `src/SetParser.y` (line 49)
 
@@ -151,7 +151,7 @@ giving immediate regression coverage for the core set operations.
 |---|-----------|--------|--------|
 | 1 | ~~Fix swapped Unicode operators~~ ✓ Done | Trivial | High — correctness bug |
 | 2 | ~~Name output files after definitions~~ ✓ Done | Small | High — usability |
-| 3 | Line numbers in parse errors | Medium | High — usability |
+| 3 | ~~Line numbers in parse errors~~ ✓ Done | Medium | High — usability |
 | 4 | Element counts in results table | Small | Medium — usability |
 | 5 | Cache sorted inputs with timestamps | Medium | Medium — performance |
 | 6 | Symmetric difference operator | Medium | Medium — functionality |
