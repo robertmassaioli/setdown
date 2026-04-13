@@ -11,8 +11,9 @@ import qualified Text.Layout.Table      as Tab
 import           System.Console.CmdArgs
 import           System.Exit
 
-import           Control.Monad          (filterM, forM_, unless, when)
-import           Control.Arrow          (first)
+import           Control.Monad          (filterM, forM, forM_, unless, when)
+import           Data.Word              (Word8)
+
 import           Data.List              (intersperse, isSuffixOf, partition)
 import           Data.Maybe             (fromMaybe)
 
@@ -208,9 +209,13 @@ main = do
    computedFiles <- runSimpleDefinitions context simpleSetData sortedFiles
    -- Step 3: Publish retained results under their definition names.
    publishedFiles <- publishResults context computedFiles
-   -- Step 4: Print out the final statistics with the definitions pointing to how many elements that
+   -- Step 4: Count the elements in each result file.
+   annotatedFiles <- forM publishedFiles $ \(sd, fp) -> do
+      n <- countLines fp
+      return (sd, fp, n)
+   -- Step 5: Print out the final statistics with the definitions pointing to how many elements that
    -- each contained and where to find their output files.
-   printComputedResults opts publishedFiles
+   printComputedResults opts annotatedFiles
 
 publishResults :: Context -> [(SimpleDefinition, FilePath)] -> IO [(SimpleDefinition, FilePath)]
 #ifndef mingw32_HOST_OS
@@ -227,6 +232,10 @@ publishResults ctx results = mapM publish results
 #else
 publishResults _ results = return results
 #endif
+
+countLines :: FilePath -> IO Int
+countLines fp = fromIntegral . B.count newlineByte <$> B.readFile fp
+   where newlineByte = 0x0A :: Word8
 
 filesNotFound :: Context -> [FilePath] -> IO [FilePath]
 filesNotFound ctx = filterM (\x -> not <$> doesFileExist (cBaseDir ctx </> x))
@@ -269,19 +278,32 @@ printTabularResults fileMapping = sequence_ . fmap putStrLn $ Tab.tableLines (Ta
 
       rows = [Tab.rowsG $ fmap (\(from, to) -> [from, to]) fileMapping]
 
-printComputedResults :: Options -> [(SimpleDefinition, FilePath)] -> IO ()
+printTabularResultsWithCount :: [(String, FilePath, Int)] -> IO ()
+printTabularResultsWithCount rows = sequence_ . fmap putStrLn $ Tab.tableLines (Tab.columnHeaderTableS columns Tab.unicodeBoldHeaderS headers tableRows)
+   where
+      headers = Tab.titlesH ["Name", "File", "Count"]
+
+      columns =
+         [ Tab.column Tab.expand Tab.left  Tab.noAlign Tab.noCutMark
+         , Tab.column Tab.expand Tab.left  Tab.noAlign Tab.noCutMark
+         , Tab.column Tab.expand Tab.right Tab.noAlign Tab.noCutMark
+         ]
+
+      tableRows = [Tab.rowsG $ fmap (\(defName, fp, n) -> [defName, fp, show n]) rows]
+
+printComputedResults :: Options -> [(SimpleDefinition, FilePath, Int)] -> IO ()
 printComputedResults opts results = do
    unless (null tempResults || not (showTransient opts)) $ do
       putStrLn "Transient results:"
-      printTabularResults . fmap (first (LT.unpack . getIdentifier)) $ tempResults
+      printTabularResultsWithCount . fmap toRow $ tempResults
       printNewline
    unless (null retainResults) $ do
       unless (not (showTransient opts)) $ putStrLn "Required results:"
-      printTabularResults . fmap (first (LT.unpack . getIdentifier)) $ retainResults
+      printTabularResultsWithCount . fmap toRow $ retainResults
    where
-      (retainResults, tempResults) = partition (sdRetain . fst) results
-      --printResults = sequence_ . intersperse printNewline . fmap printComputedResult
+      (retainResults, tempResults) = partition (\(sd, _, _) -> sdRetain sd) results
       getIdentifier (SimpleDefinition ident _ _) = ident
+      toRow (sd, fp, n) = (LT.unpack (getIdentifier sd), fp, n)
 
 
 printComputedResult :: (SimpleDefinition, FilePath) -> IO ()
