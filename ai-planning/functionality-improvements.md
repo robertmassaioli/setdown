@@ -118,7 +118,7 @@ exactly one side).
 
 ---
 
-## 7. Parallelise independent definition evaluation
+## 7. Parallelise independent definition evaluation (partially done)
 
 **File:** `src/PerformOperations.hs`, `computeSimpleDefinitions`
 
@@ -127,6 +127,13 @@ The dependency graph is already implicitly available (the cycle-detection pass i
 `SimpleDefinitionCycles.hs` builds it). Topologically sorting definitions and evaluating
 independent ones concurrently — using `async`/`concurrently` from the `async` package — could
 significantly reduce wall-clock time for `.setdown` files with many parallel branches.
+
+**Option A (parallel sort phase) ✓ Done:** Input file sorting now uses `mapConcurrently`
+in `src/ExternalSort.hs`. Sort time is bounded by the slowest single file rather than
+the sum of all files.
+
+**Option B (topological level decomposition):** Not yet implemented. See
+`ai-planning/parallel-evaluation.md` for the full proposal.
 
 ---
 
@@ -155,5 +162,5 @@ giving immediate regression coverage for the core set operations.
 | 4 | ~~Element counts in results table~~ ✓ Done | Small | Medium — usability |
 | 5 | Cache sorted inputs with timestamps | Medium | Medium — performance |
 | 6 | Symmetric difference operator | Medium | Medium — functionality |
-| 7 | Parallelise independent definitions | Large | Medium — performance |
+| 7 | Parallelise independent definitions (Option A ✓ Done, Option B pending) | Large | Medium — performance |
 | 8 | Add a test suite | Large | High — quality |

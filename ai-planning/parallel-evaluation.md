@@ -47,7 +47,7 @@ together.
 
 ---
 
-## Option A — Parallel input file sorting only
+## Option A — Parallel input file sorting only ✓ Done
 
 **Approach:** Replace `mapM` with `mapConcurrently` from the `async` package in
 `extractAndSortFiles`. The definition evaluation phase is left unchanged.
@@ -79,6 +79,8 @@ when those files are large (sort is I/O-bound) or numerous.
 the bottleneck is definition computation rather than sorting.
 
 **Files changed:** `src/ExternalSort.hs` (one line), `setdown.cabal` (add `async`).
+
+**Status:** Implemented and merged to main.
 
 **Risk:** Low. File sorts are embarrassingly parallel. The only shared resource is the
 output directory; each sort writes to distinct paths. No coordination needed.
