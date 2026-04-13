@@ -7,7 +7,7 @@ or deficiency and proposes a concrete direction for addressing it.
 
 ---
 
-## 1. Fix the swapped Unicode operator mappings (bug)
+## 1. ~~Fix the swapped Unicode operator mappings (bug)~~ ✓ Done
 
 **File:** `src/SetLanguage.x`, lines 23–24
 
@@ -149,7 +149,7 @@ giving immediate regression coverage for the core set operations.
 
 | # | Suggestion | Effort | Impact |
 |---|-----------|--------|--------|
-| 1 | Fix swapped Unicode operators | Trivial | High — correctness bug |
+| 1 | ~~Fix swapped Unicode operators~~ ✓ Done | Trivial | High — correctness bug |
 | 2 | Name output files after definitions | Small | High — usability |
 | 3 | Line numbers in parse errors | Medium | High — usability |
 | 4 | Element counts in results table | Small | Medium — usability |
