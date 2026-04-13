@@ -110,6 +110,34 @@ set algebra but omit symmetric difference (A △ B = elements in A or B but not 
 a common and useful operation — for example, finding records that exist in one data set but not
 the other, or identifying changes between two versions of a list.
 
+**Is it already expressible?** Yes. Symmetric difference is algebraically equivalent to
+`(A - B) \/ (B - A)`, and the current grammar supports nested bracketed expressions. A user
+can write this today in a single definition:
+
+```setdown
+SymDiff: ("a.txt" - "b.txt") \/ ("b.txt" - "a.txt")
+```
+
+Or across two intermediate definitions if the inputs are themselves definitions:
+
+```setdown
+ANotB:   A - B
+BNotA:   B - A
+SymDiff: ANotB \/ BNotA
+```
+
+**Is a dedicated operator just syntactic sugar?** Largely yes, with one meaningful
+difference: a native `><` operator could be implemented as a single sorted-merge pass
+over both inputs (similar to how `\/` works but keeping only elements appearing in exactly
+one side), whereas the equivalent expression `(A - B) \/ (B - A)` computes three
+separate file operations — two differences and a union — reading the inputs twice each.
+For large files the native operator would be meaningfully faster. For typical setdown
+workloads the difference is unlikely to matter.
+
+Given that symmetric difference is already expressible, this suggestion has lower priority
+than it first appears. It would be a convenience feature with a performance bonus for large
+files, not a missing capability.
+
 A natural syntax would be `><` (or the Unicode `△`). Implementation requires adding a token in
 the lexer, a production in the parser, an operator case in `SetData.hs`, and the corresponding
 `OperatorTools` entry in `PerformOperations.hs` (`otKeepRemainderLeft = True`,
