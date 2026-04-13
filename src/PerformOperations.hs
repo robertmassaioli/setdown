@@ -109,9 +109,17 @@ data (Eq a, Ord a) => OperatorTools a = OT
    }
 
 operatorTools :: Ord a => Operator -> OperatorTools a
-operatorTools And          = OT (==)            const False False -- fst or snd, it does not matter they are equal
-operatorTools Or           = OT (const2 True)   min   True  True
-operatorTools Difference   = OT (<)             const True  False
+operatorTools And                = OT (==)       const False False -- fst or snd, it does not matter they are equal
+operatorTools Or                 = OT (const2 True) min True  True
+operatorTools Difference         = OT (<)        const True  False
+-- Symmetric difference: OT (/=) min True True
+-- Correctness: when l /= r, chosen = min l r.
+--   l < r: emit l; dropWhileChosen advances left past l, leaves right unchanged (r > l). ✓
+--   l > r: emit r; dropWhileChosen leaves left unchanged (l > r), advances right past r. ✓
+--   l == r: otCompare is False → else-EQ branch: skip both, no emit. ✓
+--   Remainders of either side: kept by otKeepRemainderLeft/Right = True. ✓
+-- The else-LT and else-GT branches are unreachable since (/=) fires for both LT and GT.
+operatorTools SymmetricDifference = OT (/=)      min   True  True
 
 const2 :: a -> b -> c -> a
 const2 = const . const

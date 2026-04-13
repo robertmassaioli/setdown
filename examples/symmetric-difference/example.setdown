@@ -1,0 +1,9 @@
+-- Subscribers who changed status between January and February:
+-- those who left (in January but not February) or joined (in February but not January).
+--
+-- Both definitions below produce identical results.
+-- ChangedNative uses the new >< operator (symmetric difference).
+-- ChangedManual expresses the same operation with existing operators.
+
+ChangedNative: "january.txt" >< "february.txt"
+ChangedManual: ("january.txt" - "february.txt") \/ ("february.txt" - "january.txt")

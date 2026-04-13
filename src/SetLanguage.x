@@ -24,6 +24,8 @@ tokens :-
    "∪"               { tok UnionTok }
    "∩"               { tok IntersectionTok }
    "-"               { tok DifferenceTok }
+   "><"              { tok SymmetricDifferenceTok }
+   "△"               { tok SymmetricDifferenceTok }
    \"[^\"]+\"        { \pos bs -> LocatedToken pos (FilenameTok . TL.unpack . TL.init . TL.tail . TLE.decodeUtf8 $ bs) }
    $ident+$white*":" { \pos bs -> LocatedToken pos (IdentifierDefinitionTok . TL.strip . TL.init . TLE.decodeUtf8 $ bs) }
    $ident+           { \pos bs -> LocatedToken pos (IdentifierTok . TLE.decodeUtf8 $ bs) }
@@ -38,6 +40,7 @@ data SetToken
    | DifferenceTok
    | LParenTok
    | RParenTok
+   | SymmetricDifferenceTok
    deriving(Show, Eq)
 
 prettyToken :: SetToken -> String
@@ -47,6 +50,7 @@ prettyToken (IdentifierTok name)           = TL.unpack name
 prettyToken IntersectionTok                = "/\\"
 prettyToken UnionTok                       = "\\/"
 prettyToken DifferenceTok                  = "-"
+prettyToken SymmetricDifferenceTok         = "><"
 prettyToken LParenTok                      = "("
 prettyToken RParenTok                      = ")"
 

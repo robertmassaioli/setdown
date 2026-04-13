@@ -69,6 +69,7 @@ orderExpression se@(SimpleUnaryExpression {}) = se
 orderExpression se@(SimpleBinaryExpression op left right) = if operatorIsCommutative op && right < left then SimpleBinaryExpression op right left else se
 
 operatorIsCommutative :: Operator -> Bool
-operatorIsCommutative And = True
-operatorIsCommutative Or = True
-operatorIsCommutative Difference = False
+operatorIsCommutative And                 = True
+operatorIsCommutative Or                  = True
+operatorIsCommutative Difference          = False
+operatorIsCommutative SymmetricDifference = True

@@ -23,6 +23,7 @@ data Operator
    = And
    | Or
    | Difference
+   | SymmetricDifference
    deriving (Eq, Ord, Show)
 
 data Expression

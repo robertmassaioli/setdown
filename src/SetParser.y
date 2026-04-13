@@ -16,6 +16,7 @@ import qualified Data.Text.Lazy as TL
    and            { LocatedToken _ IntersectionTok }
    or             { LocatedToken _ UnionTok }
    diff           { LocatedToken _ DifferenceTok }
+   symdiff        { LocatedToken _ SymmetricDifferenceTok }
    identifierDef  { LocatedToken _ (IdentifierDefinitionTok $$) }
    identifier     { LocatedToken _ (IdentifierTok $$) }
    filename       { LocatedToken _ (FilenameTok $$) }
@@ -39,9 +40,10 @@ brackexp : '(' exp ')'       { BrackExp $2 }
 baseexp : filename           { FilenameExp $1 }
         | identifier         { IdentifierExp (Identifier $1) }
 
-operator : and    { IntersectionOp }
-         | or     { UnionOp }
-         | diff   { DifferenceOp }
+operator : and     { IntersectionOp }
+         | or      { UnionOp }
+         | diff    { DifferenceOp }
+         | symdiff { SymmetricDifferenceOp }
 
 {
 parseError :: [LocatedToken] -> a
@@ -56,6 +58,7 @@ data SetOperator
    = IntersectionOp
    | UnionOp
    | DifferenceOp
+   | SymmetricDifferenceOp
    deriving(Show, Eq)
 
 data Identifier = Identifier

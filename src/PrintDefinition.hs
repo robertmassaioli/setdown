@@ -79,9 +79,10 @@ wrapInBrackets printAction = do
    putStr ")"
 
 printOperator :: Operator -> IO ()
-printOperator And          = putStr "∩"
-printOperator Or           = putStr "∪"
-printOperator Difference   = putStr "-"
+printOperator And                = putStr "∩"
+printOperator Or                 = putStr "∪"
+printOperator Difference         = putStr "-"
+printOperator SymmetricDifference = putStr "△"
 
 printId :: Identifier -> IO ()
 printId = T.putStr

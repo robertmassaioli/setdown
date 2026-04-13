@@ -21,6 +21,7 @@ fromParserExpression (SP.FilenameExp filename) = FileExpression filename
 fromParserExpression (SP.IdentifierExp (SP.Identifier name)) = IdentifierExpression name
 
 fromParserOperator :: SP.SetOperator -> Operator
-fromParserOperator SP.IntersectionOp = And
-fromParserOperator SP.UnionOp = Or
-fromParserOperator SP.DifferenceOp = Difference
+fromParserOperator SP.IntersectionOp        = And
+fromParserOperator SP.UnionOp               = Or
+fromParserOperator SP.DifferenceOp          = Difference
+fromParserOperator SP.SymmetricDifferenceOp = SymmetricDifference
