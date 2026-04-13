@@ -1,0 +1,12 @@
+DELETE /api/products/{id}
+GET /api/orders
+GET /api/payments
+GET /api/products
+GET /api/products/{id}
+GET /api/users
+GET /api/users/{id}
+PATCH /api/users/{id}
+POST /api/orders
+POST /api/payments
+POST /api/products
+POST /api/users

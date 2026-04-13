@@ -1,0 +1,7 @@
+-- Audit dependencies across two applications.
+-- Find shared and unique dependencies, and the full combined set.
+
+Shared:  "app-a.txt" /\ "app-b.txt"
+OnlyInA: "app-a.txt" - "app-b.txt"
+OnlyInB: "app-b.txt" - "app-a.txt"
+AllDeps: "app-a.txt" \/ "app-b.txt"

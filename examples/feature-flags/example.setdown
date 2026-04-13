@@ -1,0 +1,7 @@
+-- Segment users by feature experiment exposure.
+-- Find users in multiple experiments and those eligible for a follow-up study.
+
+ABOverlap:        "experiment-a.txt" /\ "experiment-b.txt"
+AllExposed:       ("experiment-a.txt" \/ "experiment-b.txt") \/ "experiment-c.txt"
+EligibleFollowup: AllExposed - "opted-out.txt"
+CoreGroup:        ("experiment-a.txt" /\ "experiment-b.txt") /\ "experiment-c.txt"

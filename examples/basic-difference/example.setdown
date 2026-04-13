@@ -1,0 +1,5 @@
+-- Compare API endpoints between v1 and v2 releases.
+-- Find what was added and what was removed.
+
+Added:   "api-v2.txt" - "api-v1.txt"
+Removed: "api-v1.txt" - "api-v2.txt"

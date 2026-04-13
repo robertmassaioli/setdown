@@ -1,0 +1,6 @@
+-- Compare customer lists between two months.
+-- Identify retained, new, and lost customers.
+
+Retained: "customers-jan.txt" /\ "customers-feb.txt"
+New:      "customers-feb.txt" - "customers-jan.txt"
+Lost:     "customers-jan.txt" - "customers-feb.txt"

@@ -1,0 +1,6 @@
+-- Derive permission groups from role membership files.
+-- admins and developers are internal staff; contractors are external.
+
+InternalStaff:   "admins.txt" \/ "developers.txt"
+AllUsers:        InternalStaff \/ "contractors.txt"
+ContractorsOnly: "contractors.txt" - InternalStaff

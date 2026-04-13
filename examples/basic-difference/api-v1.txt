@@ -1,0 +1,10 @@
+DELETE /api/orders/{id}
+DELETE /api/users/{id}
+GET /api/orders
+GET /api/products
+GET /api/products/{id}
+GET /api/users
+GET /api/users/{id}
+POST /api/orders
+POST /api/products
+POST /api/users

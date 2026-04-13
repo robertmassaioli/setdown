@@ -154,7 +154,7 @@ main = do
          mapM_ T.putStrLn xs
          exitWith (ExitFailure 12)
 
-   allFiles <- filesNotFound . S.toList . extractFilenamesFromDefinitions $ setData
+   allFiles <- filesNotFound context . S.toList . extractFilenamesFromDefinitions $ setData
    unless (null allFiles) $ do
       putStrLn "[Error 13] the following files could not be found:"
       forM_ allFiles (\fp -> putStrLn $ " - " ++ fp)
@@ -205,8 +205,8 @@ main = do
    -- each contained and where to find their output files.
    printComputedResults opts computedFiles
 
-filesNotFound :: [FilePath] -> IO [FilePath]
-filesNotFound = filterM (\x -> not <$> doesFileExist x)
+filesNotFound :: Context -> [FilePath] -> IO [FilePath]
+filesNotFound ctx = filterM (\x -> not <$> doesFileExist (cBaseDir ctx </> x))
 
 printCycles :: [SimpleDefinitions] -> IO ()
 printCycles sds = forM_ sds $ \sd -> do

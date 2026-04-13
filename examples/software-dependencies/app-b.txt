@@ -1,0 +1,9 @@
+aeson
+base
+bytestring
+conduit
+containers
+mtl
+postgresql-simple
+text
+transformers

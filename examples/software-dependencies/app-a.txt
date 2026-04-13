@@ -1,0 +1,10 @@
+aeson
+base
+bytestring
+containers
+http-client
+mtl
+text
+transformers
+vector
+warp
