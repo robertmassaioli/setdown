@@ -34,6 +34,9 @@ output/Removed.txt
 Transient definitions (internally generated intermediate results) keep their UUID names
 since they are implementation details and their `sdRetain` flag is already `False`.
 
+The UUID result files remain in the output directory as the canonical data files. The named
+`.txt` files are hard links to the same inode — no extra disk space is used.
+
 ---
 
 ## Filename safety analysis
@@ -100,13 +103,37 @@ Shared:    "app-a.txt" /\ "app-b.txt"
 AlsoShared: "app-a.txt" /\ "app-b.txt"
 ```
 
-Both `Shared` and `AlsoShared` will map to the same UUID file. If we **rename** the source
-file, the second rename attempt will fail because the source no longer exists. We must
-**copy** instead, writing the same content to both `Shared.txt` and `AlsoShared.txt`.
+Both `Shared` and `AlsoShared` will map to the same UUID file. With hard links this is
+handled naturally: `createLink uuidFile "Shared.txt"` and `createLink uuidFile "AlsoShared.txt"`
+each create an independent hard link to the same inode. Both named files exist, share the
+same content, and use no extra disk space beyond the UUID file itself.
 
-After all copies are complete, UUID files that were the source of at least one retained
-definition copy can be deleted (they are now redundant). UUID files belonging to transient
-definitions should be left in place, as they may be inspected via `--show-transient`.
+---
+
+## Hard links vs symlinks vs copy
+
+Three options were considered for creating the named `.txt` files:
+
+| Approach | Disk space | Broken-link risk | Windows support |
+|----------|-----------|-----------------|----------------|
+| `copyFile` | Doubles size | None | ✓ native |
+| Symlink (`createFileLink`) | Negligible | Yes — if UUID deleted | Requires Developer Mode / Admin |
+| Hard link (`createLink`) | None | None — same inode | Not available in `System.Directory`; needs `Win32` package |
+
+**Decision: hard links on Unix, silent fallback to UUID-only behaviour on Windows.**
+
+Hard links are strictly superior on Unix:
+- Same inode as the UUID file — zero additional disk usage.
+- The UUID file and named file are peers; neither is "the source." Deleting one does not
+  affect the other.
+- No elevated privileges required.
+- The filesystem shows both names as ordinary files — transparent to downstream tools.
+
+`copyFile` is not used. Doubling disk usage is unacceptable for a quality-of-life feature,
+particularly when processing large files. On Windows, where `System.Posix.Files` is
+unavailable, named `.txt` files are simply not created and the output directory retains
+the existing UUID-only layout. No warning is printed; Windows users receive the same
+behaviour they have always had.
 
 ---
 
@@ -115,47 +142,63 @@ definitions should be left in place, as they may be inspected via `--show-transi
 All changes are confined to `src/Main.hs`. `PerformOperations.hs` and `ExternalSort.hs`
 are untouched.
 
-### Step 1 — write a `publishResults` function
+### Step 1 — add language extension and import
+
+At the top of `src/Main.hs`, add the CPP language extension:
+
+```haskell
+{-# LANGUAGE CPP #-}
+```
+
+In the import block, conditionally import `createLink` on non-Windows platforms:
+
+```haskell
+#ifndef mingw32_HOST_OS
+import           System.Posix.Files     (createLink)
+#endif
+```
+
+`System.Posix.Files` is provided by the `unix` package, which is already a transitive
+dependency on Unix platforms.
+
+### Step 2 — write a `publishResults` function
 
 After `runSimpleDefinitions` returns `computedFiles :: [(SimpleDefinition, FilePath)]`,
-call a new function that copies retained results to named paths and returns an updated list:
+call a new function that hard-links retained results to named paths on Unix and returns an
+updated list. On Windows the function is a no-op and the original UUID paths are returned
+unchanged.
 
 ```haskell
 publishResults :: Context -> [(SimpleDefinition, FilePath)] -> IO [(SimpleDefinition, FilePath)]
-publishResults ctx results = do
-   updated <- mapM publish results
-   cleanupOrphanedUUIDs ctx results updated
-   return updated
+#ifndef mingw32_HOST_OS
+publishResults ctx results = mapM publish results
   where
    publish (sd, src)
       | sdRetain sd = do
-            let dest = cOutputDir ctx </> TL.unpack (sdId sd) ++ ".txt"
-            copyFile src dest
+            let dest = cOutputDir ctx </> LT.unpack (sdId sd) ++ ".txt"
+            destExists <- doesFileExist dest
+            when destExists $ removeFile dest
+            createLink src dest
             return (sd, dest)
       | otherwise = return (sd, src)
+#else
+publishResults _ results = return results
+#endif
 ```
 
-`copyFile` is available from `System.Directory` (already imported).
+`sdId` returns a `Data.Text.Lazy.Text`; `LT.unpack` converts it to a `String` for
+`FilePath` construction. `LT` is already imported as `Data.Text.Lazy`.
 
-### Step 2 — clean up orphaned UUID files
+`doesFileExist` and `removeFile` are already available from `System.Directory`.
+`when` is available from `Control.Monad` (already imported).
 
-After all copies are done, delete UUID source files that are no longer the canonical path
-for any result (i.e. files that were the source of at least one retained copy and are not
-themselves the destination of anything):
+The pre-existing destination must be removed before `createLink` because hard links cannot
+overwrite an existing path — `createLink` raises `FileAlreadyExists` otherwise.
 
-```haskell
-cleanupOrphanedUUIDs :: Context
-                     -> [(SimpleDefinition, FilePath)]  -- original (UUID paths)
-                     -> [(SimpleDefinition, FilePath)]  -- updated (named paths)
-                     -> IO ()
-cleanupOrphanedUUIDs _ before after = do
-   let retainedSources = S.fromList [src | (sd, src) <- before, sdRetain sd]
-   let newPaths        = S.fromList (fmap snd after)
-   let orphans         = retainedSources S.\\ newPaths
-   mapM_ removeFile (S.toList orphans)
-```
-
-`removeFile` is from `System.Directory`.
+No cleanup of UUID files is needed. The UUID file and the named file share the same inode;
+both remain in the output directory, which is fine: UUID files for transient definitions
+were always left in place, and UUID files for retained definitions now simply have an
+additional named hard link.
 
 ### Step 3 — wire into `main`
 
@@ -174,28 +217,21 @@ publishedFiles <- publishResults context computedFiles
 printComputedResults opts publishedFiles
 ```
 
-The summary table in `printComputedResults` then naturally shows the named paths.
-
-### New imports required in `Main.hs`
-
-```haskell
-import System.Directory (copyFile, removeFile, ...)
-```
-
-`System.Directory` is already imported; `copyFile` and `removeFile` just need to be added
-to the import list.
+The summary table in `printComputedResults` then naturally shows the named paths on Unix
+and the existing UUID paths on Windows.
 
 ---
 
 ## Behavioural changes
 
-| Scenario | Before | After |
-|----------|--------|-------|
-| Normal run | `output/<uuid>` | `output/MyDef.txt` |
-| Re-run | Accumulates new UUID files | Overwrites named file in place |
-| Two defs with identical expressions | Both point to same UUID | Each gets its own named copy |
-| Transient defs (`--show-transient`) | UUID files in output | UUID files unchanged |
-| Summary table paths | Long UUID paths | Short readable names |
+| Scenario | Before | After (Unix) | After (Windows) |
+|----------|--------|--------------|-----------------|
+| Normal run | `output/<uuid>` | `output/MyDef.txt` (hard link to UUID file) | `output/<uuid>` (unchanged) |
+| Re-run | Accumulates new UUID files | Removes old named link, creates new one | Accumulates new UUID files (unchanged) |
+| Two defs with identical expressions | Both point to same UUID | Each gets its own named hard link to the same UUID inode | Unchanged |
+| Transient defs (`--show-transient`) | UUID files in output | UUID files unchanged | Unchanged |
+| Summary table paths | Long UUID paths | Short readable names | Long UUID paths (unchanged) |
+| Disk usage | 1× per result | 1× per result (hard link shares inode) | Unchanged |
 
 ---
 
@@ -207,6 +243,8 @@ to the import list.
   require a language change.
 - Atomic writes (write to temp then rename) — worthwhile for large files but a separate
   concern.
+- Cleaning up UUID files for retained definitions — they remain as the inode backing the
+  hard link and are harmless.
 
 ---
 
@@ -214,4 +252,5 @@ to the import list.
 
 | File | Change |
 |------|--------|
-| `src/Main.hs` | Add `publishResults`, `cleanupOrphanedUUIDs`; wire into `main`; add `copyFile`, `removeFile` to `System.Directory` import |
+| `src/Main.hs` | Add `{-# LANGUAGE CPP #-}`; conditional `createLink` import (Unix only); `publishResults` function (no-op on Windows); wire into `main`; add `removeFile` to `System.Directory` import |
+| `setdown.cabal` | Add `unix` to `build-depends` under an `if !os(windows)` conditional stanza |
