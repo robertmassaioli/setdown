@@ -187,6 +187,28 @@ Parse error at line 1, column 21: unexpected token IntersectionTok
 
 ---
 
+## Only the first error is reported
+
+This proposal reports exactly one parse error per run. When Happy cannot shift or reduce
+a token it calls `parseError` immediately. Because `parseError` calls Haskell's `error`,
+an exception is thrown and parsing halts. There is no opportunity to skip the bad token
+and continue.
+
+Happy does provide an `error` token mechanism that allows a grammar to describe error
+recovery rules (consume tokens until a synchronisation point, then resume). Implementing
+this would require:
+
+1. Adding `error` productions to `SetParser.y` at natural synchronisation points (e.g.
+   the start of each `definition`).
+2. Changing `parseError` to record errors and return a sentinel value rather than throw.
+3. Accumulating all errors and reporting them together after parsing completes.
+
+This is a substantially larger change and is out of scope for this proposal. For a
+`.setdown` file with multiple syntax errors the user will need to fix one error and re-run
+to discover the next. This is the same behaviour as today.
+
+---
+
 ## Edge cases
 
 ### Comment and whitespace lines
@@ -211,6 +233,40 @@ satisfied (e.g. a definition with no expression). This is reported separately as
 
 `parseError` currently calls `error`, which throws an impure exception. This is unchanged
 — improving error recovery is a separate concern.
+
+---
+
+## Demonstration example
+
+`examples/parse-error/` contains a `.setdown` file with a deliberate double-operator
+syntax error on line 3. Running it against the current build and the patched build shows
+the difference in error quality.
+
+**`examples/parse-error/example.setdown`:**
+
+```setdown
+-- This file intentionally contains a syntax error to demonstrate parse error reporting.
+-- Line 3 has a doubled /\ operator.
+Overlap: "users-a.txt" /\ /\ "users-b.txt"
+Union:   "users-a.txt" \/ "users-b.txt"
+```
+
+**Current output (before this proposal):**
+
+```
+setdown: Parse error: [IntersectionTok,FilenameTok "users-b.txt",IdentifierDefinitionTok "Union",FilenameTok "users-a.txt",UnionTok,FilenameTok "users-b.txt"]
+CallStack (from HasCallStack):
+  error, called at src/SetParser.y:49:18 in ...
+```
+
+**Output after this proposal:**
+
+```
+setdown: Parse error at line 3, column 23: unexpected token IntersectionTok
+```
+
+The example directory also includes the referenced data files so that setdown reaches the
+parse stage rather than failing earlier at file-not-found verification.
 
 ---
 

@@ -1,0 +1,6 @@
+-- This file intentionally contains a syntax error to demonstrate parse error reporting.
+-- Line 3 has a doubled /\ operator, which is a common mistake when editing definitions.
+-- Current output:  Parse error: [IntersectionTok,FilenameTok "users-b.txt",...]
+-- Expected output: Parse error at line 3, column 23: unexpected token IntersectionTok
+Overlap: "users-a.txt" /\ /\ "users-b.txt"
+Union:   "users-a.txt" \/ "users-b.txt"
