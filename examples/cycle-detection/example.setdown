@@ -1,0 +1,14 @@
+-- This file intentionally contains a cycle to demonstrate cycle detection.
+--
+-- Three segments form a three-way dependency loop:
+--
+--   HighValue   depends on Loyal
+--   Loyal       depends on Engaged
+--   Engaged     depends on HighValue
+--
+-- setdown will detect this cycle and exit with an error before
+-- attempting any computation.
+
+HighValue: Loyal /\ "high-spend.txt"
+Loyal:     Engaged - "churned.txt"
+Engaged:   HighValue \/ "new-users.txt"
