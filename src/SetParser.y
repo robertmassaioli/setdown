@@ -50,7 +50,7 @@ parseError []
 parseError (LocatedToken (AlexPn _ line col) t : _)
    = error $ "Parse error at line " ++ show line
           ++ ", column " ++ show col
-          ++ ": unexpected token " ++ show t
+          ++ ": unexpected \"" ++ prettyToken t ++ "\""
 
 data SetOperator
    = IntersectionOp

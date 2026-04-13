@@ -40,6 +40,16 @@ data SetToken
    | RParenTok
    deriving(Show, Eq)
 
+prettyToken :: SetToken -> String
+prettyToken (FilenameTok fp)               = "\"" ++ fp ++ "\""
+prettyToken (IdentifierDefinitionTok name) = TL.unpack name ++ ":"
+prettyToken (IdentifierTok name)           = TL.unpack name
+prettyToken IntersectionTok                = "/\\"
+prettyToken UnionTok                       = "\\/"
+prettyToken DifferenceTok                  = "-"
+prettyToken LParenTok                      = "("
+prettyToken RParenTok                      = ")"
+
 data LocatedToken = LocatedToken AlexPosn SetToken deriving (Show, Eq)
 
 tok :: SetToken -> AlexPosn -> ByteString.ByteString -> LocatedToken
