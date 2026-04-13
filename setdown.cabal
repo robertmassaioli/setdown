@@ -95,6 +95,7 @@ executable setdown
                        , mtl           >= 2.2  && < 2.4
                        , cmdargs       >= 0.10 && < 0.11
                        , table-layout  >= 0.8  && < 1.1
+                       , async         >= 2.2  && < 2.3
 
   if !os(windows)
     build-depends:     unix >= 2.7 && < 2.9

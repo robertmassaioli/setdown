@@ -9,7 +9,8 @@ import Data.Int
 import Data.Maybe (catMaybes)
 import qualified Data.UUID.V4 as UUID
 import Data.List.Split (chunksOf)
-import Control.Monad (forM)
+import Control.Monad              (forM)
+import Control.Concurrent.Async   (mapConcurrently)
 import System.FilePath ((</>))
 import Control.Arrow (second)
 import qualified Data.Text.Lazy as T
@@ -18,7 +19,7 @@ import qualified Data.Text.Lazy.IO as T
 import Context
 
 extractAndSortFiles :: Context -> [FilePath] -> IO [(FilePath, FilePath)]
-extractAndSortFiles ctx = mapM (extractAndSortFile ctx)
+extractAndSortFiles ctx = mapConcurrently (extractAndSortFile ctx)
 
 extractAndSortFile :: Context -> FilePath -> IO (FilePath, FilePath)
 extractAndSortFile ctx fp = do
