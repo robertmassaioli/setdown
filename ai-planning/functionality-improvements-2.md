@@ -24,11 +24,50 @@ None of these are ever removed. After a handful of runs the output directory is 
 dozens of anonymous files. The named `.txt` hard links (introduced in v0.1.2.0) provide a
 clean view of the *results*, but the intermediate debris remains visible alongside them.
 
-**Proposed direction:** Track every intermediate file path at the time it is created (in a
-`IORef [FilePath]` threaded through the computation, or simply collected as return values) and
-delete all of them in a `finally` block after `printComputedResults` completes. The named
-result hard links are the only files that should persist. A `--keep-temp` flag could opt out
-for debugging.
+---
+
+### Recommended approach: `output/processing/` subdirectory
+
+Rather than tracking every file path in an `IORef` and deleting them one by one, route all
+intermediate writes to a `output/processing/` subdirectory and delete the whole directory at
+the end. The directory structure separates debris from results, and cleanup reduces to a
+single `removeDirectoryRecursive`.
+
+**Mechanical changes:**
+
+1. Add a `cProcessingDir :: FilePath` field to `Context` (e.g. `cOutputDir ctx </> "processing"`).
+   `prepareContext` creates it with `createDirectoryIfMissing True`.
+
+2. Change all intermediate file writes to use `cProcessingDir` instead of `cOutputDir`:
+   - `splitFile` (`.split` files)
+   - `simpleFileSort` (`.split.sorted` files)
+   - `directMergeFiles` (UUID merge files)
+   - `fileSetOperation` in `PerformOperations` (UUID operation result files)
+
+3. Update `publishResults` to promote retained files from `cProcessingDir` to `cOutputDir`:
+
+   **Unix** (already uses hard links): change the `createLink src dest` call so `src` lives in
+   `cProcessingDir` and `dest` in `cOutputDir`. No other change needed.
+
+   **Windows** (currently falls back to leaving files in place, i.e. no publishing): use
+   `renameFile src dest` to *move* each retained result file from `cProcessingDir` to
+   `cOutputDir`. `renameFile` is an atomic filesystem move on the same volume — no data is
+   copied. This also gives Windows users named output files, closing the gap with Unix.
+
+4. After `publishResults` returns, call `removeDirectoryRecursive (cProcessingDir ctx)`.
+   Wrap the entire computation in `finally` so the directory is removed even if an error
+   occurs mid-run.
+
+5. Add a `--keep-processing` flag that skips step 4, for debugging failed runs.
+
+**Why this is cleaner than per-file tracking:**
+
+- No mutable reference (`IORef`) needed anywhere in the call tree.
+- The directory itself is the manifest of what to clean up — no bookkeeping can go out of sync.
+- The separation is visible to the user at a glance: `output/` contains only named results;
+  `output/processing/` contains in-progress work and disappears when the run completes.
+- The Windows path gains named output files as a free side-effect of needing `renameFile`
+  instead of `createLink`.
 
 **User value:** **High.** This affects every user on every run. It is the most visually obvious
 roughness of the current output directory.
