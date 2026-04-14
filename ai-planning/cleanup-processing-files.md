@@ -211,29 +211,98 @@ weakens the clean separation between computation and publishing. Not recommended
 
 ---
 
+## Option D — Rename to `output/<name>.txt` for singletons; promote to `output/<uuid>` for shared sources
+
+Group retained definitions by their source file before publishing. Definitions with a unique
+source get the normal named file via `renameFile`. Definitions that *share* a source all
+point to the UUID file promoted into `output/` — the file is moved once and the UUID name is
+preserved.
+
+```haskell
+publishResults ctx results = do
+   let retained  = [(sd, src) | (sd, src) <- results, sdRetain sd]
+       transient = [(sd, src) | (sd, src) <- results, not (sdRetain sd)]
+   published <- mapM (publishGroup ctx) (groupBySrc retained)
+   return (concat published ++ transient)
+  where
+   groupBySrc = groupBy ((==) `on` snd) . sortBy (comparing snd)
+
+publishGroup :: Context -> [(SimpleDefinition, FilePath)] -> IO [(SimpleDefinition, FilePath)]
+publishGroup _   []              = return []
+publishGroup ctx [(sd, src)]     = do
+   -- Unique source: rename to a human-readable name.
+   let dest = cOutputDir ctx </> LT.unpack (sdId sd) ++ ".txt"
+   destExists <- doesFileExist dest
+   when destExists $ removeFile dest
+   renameFile src dest
+   return [(sd, dest)]
+publishGroup ctx group@((_, src) : _) = do
+   -- Shared source: promote the UUID file to output/ as-is.
+   -- All definitions in the group point to the same promoted file.
+   let dest = cOutputDir ctx </> takeFileName src
+   destExists <- doesFileExist dest
+   when destExists $ removeFile dest
+   renameFile src dest
+   return [(sd, dest) | (sd, _) <- group]
+```
+
+`takeFileName src` extracts the UUID from the processing path, e.g.
+`processing/3f2a91b0-...` → `output/3f2a91b0-...`.
+
+The results table will show all definitions that share a source pointing to the same
+UUID-named file. This is accurate — they contain identical content — and the file
+is at least in `output/`, not buried in `processing/`.
+
+On **Unix**, `createLink` continues to be used (no grouping needed), so the Unix code path
+is unchanged.
+
+**Pros:**
+- No data is ever copied; every operation is an atomic filesystem rename.
+- Zero additional disk space consumed regardless of how many definitions share a source.
+- The UUID leaks only for alias definitions — a rare, arguably degenerate case where two
+  names truly mean the same thing. The common case always gets a human-readable name.
+- No new dependencies; uses only `System.FilePath (takeFileName)` and
+  `Data.List (groupBy, sortBy)`.
+
+**Cons:**
+- Alias definitions (e.g. `A: B`) do not get their own named output file on Windows; the
+  results table shows a UUID path instead of `output/A.txt`. This is a narrowly-scoped
+  regression confined to the Windows platform and the shared-source edge case.
+- Requires sorting and grouping the retained list, adding a small amount of logic that the
+  simple per-file approach does not need.
+- The Unix and Windows publish paths still diverge under CPP, though the Windows path now
+  contains no I/O beyond `renameFile`.
+
+**Verdict:** The best balance of correctness, efficiency, and simplicity for Windows. No
+copying, no structural changes to the computation layer, and the UUID fallback is honest
+about what is happening (two names for one result). Recommended for the Windows path.
+
+---
+
 ## Comparison
 
-| | Option A | Option B | Option C |
-|---|---|---|---|
-| **Platform code paths** | One | Two (Unix/Windows) | One |
-| **I/O cost per retained file** | 1 copy | 0–1 copies | 0 (written in place) |
-| **Handles duplicate sources** | Yes (reads source N times) | Yes (copies from first dest) | N/A (no publish step) |
-| **Refactor scope** | `Main.hs` only | `Main.hs` only | `Main.hs` + `PerformOperations.hs` |
-| **output/ atomicity** | Publish is atomic step | Publish is atomic step | Interleaved with computation |
+| | Option A | Option B | Option C | Option D |
+|---|---|---|---|---|
+| **Platform code paths** | One | Two (Unix/Windows) | One | Two (Unix/Windows) |
+| **I/O cost per retained file** | 1 copy | 0–1 copies | 0 (written in place) | 0 (rename only) |
+| **Handles duplicate sources** | Yes (reads N times) | Yes (1 copy per duplicate) | N/A | Yes (UUID promoted once) |
+| **Named output for aliases** | Yes (via copy) | Yes (via copy) | Yes | No — UUID on Windows |
+| **Refactor scope** | `Main.hs` only | `Main.hs` only | `Main.hs` + `PerformOperations.hs` | `Main.hs` only |
+| **output/ atomicity** | Publish is atomic step | Publish is atomic step | Interleaved | Publish is atomic step |
 
 ---
 
 ## Recommendation
 
-**Implement Option A on Windows and `createLink` on Unix** (the existing behaviour, just
-with a `processing/` subdirectory instead of `output/` for the source files).
+**Unix:** `createLink` as today (unchanged).
 
-The resulting `publishResults` is:
+**Windows:** Option D — group retained definitions by source file, `renameFile` singletons
+to `output/<name>.txt`, and promote shared sources to `output/<uuid>`. No data is ever
+copied, and the UUID fallback is limited to the narrow case of alias definitions.
 
 ```haskell
 publishResults :: Context -> [(SimpleDefinition, FilePath)] -> IO [(SimpleDefinition, FilePath)]
 #ifndef mingw32_HOST_OS
--- Unix: hard-link from processing/ into output/; source survives every call.
 publishResults ctx results = mapM publish results
   where
    publish (sd, src)
@@ -245,25 +314,30 @@ publishResults ctx results = mapM publish results
             return (sd, dest)
       | otherwise = return (sd, src)
 #else
--- Windows: copyFile from processing/ into output/; duplicate sources are read
--- multiple times but this is correct and requires no grouping logic.
-publishResults ctx results = mapM publish results
+publishResults ctx results = do
+   let retained  = [(sd, src) | (sd, src) <- results, sdRetain sd]
+       transient = [(sd, src) | (sd, src) <- results, not (sdRetain sd)]
+   published <- mapM (publishGroup ctx) (groupBySrc retained)
+   return (concat published ++ transient)
   where
-   publish (sd, src)
-      | sdRetain sd = do
-            let dest = cOutputDir ctx </> LT.unpack (sdId sd) ++ ".txt"
-            copyFile src dest
-            return (sd, dest)
-      | otherwise = return (sd, src)
+   groupBySrc = groupBy ((==) `on` snd) . sortBy (comparing snd)
+
+publishGroup :: Context -> [(SimpleDefinition, FilePath)] -> IO [(SimpleDefinition, FilePath)]
+publishGroup _   []              = return []
+publishGroup ctx [(sd, src)]     = do
+   let dest = cOutputDir ctx </> LT.unpack (sdId sd) ++ ".txt"
+   destExists <- doesFileExist dest
+   when destExists $ removeFile dest
+   renameFile src dest
+   return [(sd, dest)]
+publishGroup ctx group@((_, src) : _) = do
+   let dest = cOutputDir ctx </> takeFileName src
+   destExists <- doesFileExist dest
+   when destExists $ removeFile dest
+   renameFile src dest
+   return [(sd, dest) | (sd, _) <- group]
 #endif
 ```
-
-Option B is strictly more efficient but the complexity it adds (sorting, grouping, two
-divergent code paths) is only justified if Windows users regularly produce retained result
-files of hundreds of megabytes. Given that set operations tend to produce results smaller
-than their inputs, Option A's copy cost is unlikely to be noticeable in practice.
-
-Option C requires the largest refactor for the least clear benefit.
 
 ---
 
