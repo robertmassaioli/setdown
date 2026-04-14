@@ -165,7 +165,7 @@ the sum of all files.
 
 ---
 
-## 8. Add a test suite
+## 8. ~~Add a test suite~~ ✓ Done
 
 The repository has no automated tests. The `examples/standard/example.setdown` file exists but
 is not wired up to anything. A minimal test suite would:
@@ -191,4 +191,4 @@ giving immediate regression coverage for the core set operations.
 | 5 | Cache sorted inputs with timestamps | Medium | Medium — performance |
 | 6 | ~~Symmetric difference operator~~ ✓ Done | Medium | Medium — functionality |
 | 7 | Parallelise independent definitions (Option A ✓ Done, Option B pending) | Large | Medium — performance |
-| 8 | Add a test suite | Large | High — quality |
+| 8 | ~~Add a test suite~~ ✓ Done | Large | High — quality |

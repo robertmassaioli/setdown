@@ -1,4 +1,4 @@
-module PerformOperations (runSimpleDefinitions) where
+module PerformOperations (runSimpleDefinitions, linesSetOperation, operatorTools, OperatorTools) where
 
 import           Context
 import           Control.Arrow            (first)
