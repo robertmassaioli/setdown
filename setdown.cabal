@@ -131,3 +131,34 @@ test-suite setdown-tests
   default-language:    Haskell2010
 
   ghc-options: -Wall
+
+test-suite setdown-property-tests
+  type:                exitcode-stdio-1.0
+  main-is:             PropertyTests.hs
+  hs-source-dirs:      test
+
+  build-depends:       base               >=4.7 && < 5
+                       , setdown
+                       , tasty            >= 1.4  && < 1.6
+                       , tasty-quickcheck >= 0.10 && < 0.12
+                       , QuickCheck       >= 2.14 && < 2.16
+                       , text             >= 1.2  && < 2.2
+
+  default-language:    Haskell2010
+
+  ghc-options: -Wall
+
+test-suite setdown-golden-tests
+  type:                exitcode-stdio-1.0
+  main-is:             GoldenTests.hs
+  hs-source-dirs:      test
+
+  build-depends:       base            >=4.7 && < 5
+                       , tasty         >= 1.4  && < 1.6
+                       , tasty-golden  >= 2.3  && < 2.4
+                       , filepath      >= 1.2  && < 3
+                       , process       >= 1.6  && < 1.7
+
+  default-language:    Haskell2010
+
+  ghc-options: -Wall
