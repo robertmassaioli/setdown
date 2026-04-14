@@ -101,7 +101,7 @@ to output semantics.
 
 ---
 
-## 6. Add a symmetric difference operator
+## 6. ~~Add a symmetric difference operator~~ ✓ Done
 
 **File:** `src/SetLanguage.x`, `src/SetParser.y`, `src/SetData.hs`, `src/PerformOperations.hs`
 
@@ -189,6 +189,6 @@ giving immediate regression coverage for the core set operations.
 | 3 | ~~Line numbers in parse errors~~ ✓ Done | Medium | High — usability |
 | 4 | ~~Element counts in results table~~ ✓ Done | Small | Medium — usability |
 | 5 | Cache sorted inputs with timestamps | Medium | Medium — performance |
-| 6 | Symmetric difference operator | Medium | Medium — functionality |
+| 6 | ~~Symmetric difference operator~~ ✓ Done | Medium | Medium — functionality |
 | 7 | Parallelise independent definitions (Option A ✓ Done, Option B pending) | Large | Medium — performance |
 | 8 | Add a test suite | Large | High — quality |
