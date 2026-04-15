@@ -81,7 +81,7 @@ fileSetOperation ctx ot leftFp rightFp = do
    return outputFilename
 
 randomFilenameInOutput :: Context -> IO FilePath
-randomFilenameInOutput ctx = inOutput ctx . show <$> UUID.nextRandom
+randomFilenameInOutput ctx = inProcessing ctx . show <$> UUID.nextRandom
 
 linesSetOperation :: OperatorTools T.Text -> [T.Text] -> [T.Text] -> [T.Text]
 linesSetOperation ot = go

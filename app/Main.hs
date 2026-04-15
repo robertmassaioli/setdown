@@ -11,11 +11,17 @@ import qualified Text.Layout.Table      as Tab
 import           System.Console.CmdArgs
 import           System.Exit
 
+import           Control.Exception      (finally)
 import           Control.Monad          (filterM, forM, forM_, unless, when)
-import           Data.Word              (Word8)
-
 import           Data.List              (intersperse, isSuffixOf, partition)
 import           Data.Maybe             (fromMaybe)
+import           Data.Word              (Word8)
+
+#ifdef mingw32_HOST_OS
+import           Data.Function          (on)
+import           Data.List              (groupBy, sortBy)
+import           Data.Ord               (comparing)
+#endif
 
 import           Context
 import           DefinitionHelpers
@@ -30,9 +36,15 @@ import           DuplicateElimination
 import           PerformOperations
 import           SimpleDefinitionCycles
 
-import           System.Directory       (doesFileExist, getCurrentDirectory,
-                                         listDirectory, removeFile)
+import           System.Directory       (doesDirectoryExist, doesFileExist,
+                                         getCurrentDirectory, listDirectory,
+                                         removeDirectoryRecursive, removeFile)
 import           System.FilePath        (dropFileName, (</>))
+
+#ifdef mingw32_HOST_OS
+import           System.Directory       (renameFile)
+import           System.FilePath        (takeFileName)
+#endif
 
 #ifndef mingw32_HOST_OS
 import           System.Posix.Files     (createLink)
@@ -48,6 +60,7 @@ data Options = Options
    { outputDirectory :: Maybe FilePath
    , setdownFile     :: Maybe FilePath
    , showTransient   :: Bool
+   , keepProcessing  :: Bool
    } deriving (Show, Data, Typeable)
 
 options :: Options
@@ -69,6 +82,10 @@ options = Options
       &= explicit
       &= name "show-transient"
       &= help "Also show intermediate results for sub-expressions generated internally to evaluate your definitions. Useful for debugging complex .setdown files."
+   , keepProcessing = def
+      &= explicit
+      &= name "keep-processing"
+      &= help "Keep the processing/ subdirectory after the run completes instead of deleting it. Useful for inspecting intermediate files when debugging."
    }
    &= program "setdown"
    &= summary "setdown evaluates a .setdown definitions file to perform set operations (intersection, union, difference) on line-based text files, writing one result file per definition to an output directory."
@@ -128,9 +145,11 @@ main = do
    putStrLn "==> Creating the environment..."
    let baseDir = dropFileName inputFilePath
 
+   let outputDir = baseDir </> fromMaybe "output" (outputDirectory opts)
    let context = standardContext
                   { cBaseDir = baseDir
-                  , cOutputDir = baseDir </> fromMaybe "output" (outputDirectory opts)
+                  , cOutputDir = outputDir
+                  , cProcessingDir = outputDir </> "processing"
                   }
 
    putStrLn $ "  Base Directory: " ++ cBaseDir context
@@ -191,34 +210,43 @@ main = do
    putStrLn "  OK: No cycles were found in the definitions."
    printNewline
 
-   putStrLn "==> Sorting and de-duplicated input files from the definitions..."
-   -- Step 1: For every unique file, sort it (Use external sort for this purpose:
-   -- https://hackage.haskell.org/package/external-sort-0.2/docs/Algorithms-ExternalSort.html add
-   -- docs to that library if at all possible)
-   -- TODO use file timestamps to not sort these big files more than once if possible
-   sortedFiles <- extractAndSortFiles context (S.toList . extractFilenamesFromDefinitions $ setData) -- TODO use the simple set data here
-   printTabularResults sortedFiles
-   printNewline
+   let cleanup = unless (keepProcessing opts) $ do
+                    exists <- doesDirectoryExist (cProcessingDir context)
+                    when exists $ removeDirectoryRecursive (cProcessingDir context)
 
-   putStrLn "==> Setdown results"
-   -- Step 2: Calculate the graph of everything that needs to be computed and compute things one at
-   -- a time. Even make sure that you store the temporary results along the way. That way we can
-   -- refer to them later if the same computation is made twice. We should certainly memoize with
-   -- the file system. It would be great if we could print out the results of the computations as we
-   -- go.
-   computedFiles <- runSimpleDefinitions context simpleSetData sortedFiles
-   -- Step 3: Publish retained results under their definition names.
-   publishedFiles <- publishResults context computedFiles
-   -- Step 4: Count the elements in each result file.
-   annotatedFiles <- forM publishedFiles $ \(sd, fp) -> do
-      n <- countLines fp
-      return (sd, fp, n)
-   -- Step 5: Print out the final statistics with the definitions pointing to how many elements that
-   -- each contained and where to find their output files.
-   printComputedResults opts annotatedFiles
+   flip finally cleanup $ do
+
+      putStrLn "==> Sorting and de-duplicated input files from the definitions..."
+      -- Step 1: For every unique file, sort it (Use external sort for this purpose:
+      -- https://hackage.haskell.org/package/external-sort-0.2/docs/Algorithms-ExternalSort.html add
+      -- docs to that library if at all possible)
+      -- TODO use file timestamps to not sort these big files more than once if possible
+      sortedFiles <- extractAndSortFiles context (S.toList . extractFilenamesFromDefinitions $ setData) -- TODO use the simple set data here
+      printTabularResults sortedFiles
+      printNewline
+
+      putStrLn "==> Setdown results"
+      -- Step 2: Calculate the graph of everything that needs to be computed and compute things one at
+      -- a time. Even make sure that you store the temporary results along the way. That way we can
+      -- refer to them later if the same computation is made twice. We should certainly memoize with
+      -- the file system. It would be great if we could print out the results of the computations as we
+      -- go.
+      computedFiles <- runSimpleDefinitions context simpleSetData sortedFiles
+      -- Step 3: Publish retained results under their definition names.
+      publishedFiles <- publishResults context computedFiles
+      -- Step 4: Count the elements in each result file.
+      annotatedFiles <- forM publishedFiles $ \(sd, fp) -> do
+         n <- countLines fp
+         return (sd, fp, n)
+      -- Step 5: Print out the final statistics with the definitions pointing to how many elements that
+      -- each contained and where to find their output files.
+      printComputedResults opts annotatedFiles
 
 publishResults :: Context -> [(SimpleDefinition, FilePath)] -> IO [(SimpleDefinition, FilePath)]
 #ifndef mingw32_HOST_OS
+-- Unix: hard-link each retained result from processing/ into output/.
+-- createLink is a no-op on the source, so duplicate sources are handled
+-- naturally — multiple links can point to the same inode.
 publishResults ctx results = mapM publish results
   where
    publish (sd, src)
@@ -230,7 +258,36 @@ publishResults ctx results = mapM publish results
             return (sd, dest)
       | otherwise   = return (sd, src)
 #else
-publishResults _ results = return results
+-- Windows: no hard links available.
+-- Group retained definitions by their source file in processing/.
+-- Singletons are renamed (atomic move) to output/<name>.txt.
+-- Groups that share a source are all pointed at output/<uuid>, where the
+-- UUID comes from the existing filename — the file is moved once and all
+-- definitions in the group reference the promoted UUID file.
+publishResults ctx results = do
+   let (retained, transient) = partition (sdRetain . fst) results
+   published <- fmap concat . mapM (publishGroup ctx) $ groupBySrc retained
+   return (published ++ transient)
+  where
+   groupBySrc = groupBy ((==) `on` snd) . sortBy (comparing snd)
+
+publishGroup :: Context -> [(SimpleDefinition, FilePath)] -> IO [(SimpleDefinition, FilePath)]
+publishGroup _   []          = return []
+publishGroup ctx [(sd, src)] = do
+   -- Unique source: rename to a human-readable named file.
+   let dest = cOutputDir ctx </> LT.unpack (sdId sd) ++ ".txt"
+   destExists <- doesFileExist dest
+   when destExists $ removeFile dest
+   renameFile src dest
+   return [(sd, dest)]
+publishGroup ctx grp@((_, src) : _) = do
+   -- Shared source: promote the UUID file to output/ keeping its UUID name.
+   -- All definitions in the group point to this single promoted file.
+   let dest = cOutputDir ctx </> takeFileName src
+   destExists <- doesFileExist dest
+   when destExists $ removeFile dest
+   renameFile src dest
+   return [(sd, dest) | (sd, _) <- grp]
 #endif
 
 countLines :: FilePath -> IO Int
