@@ -1,7 +1,13 @@
 # Proposal: Debian and Ubuntu Package Distribution
 
 **Date:** 2026-08-16
-**Related:** README.markdown installation section (nix-shell, Hackage/stack)
+**Related:** README.markdown installation section (nix-shell, Hackage/stack); the `table-layout`
+gap identified below is explored further in
+[15-reimplement-table-layout.md](15-reimplement-table-layout.md) and
+[16-bundle-table-layout.md](16-bundle-table-layout.md)
+
+**Decision:** setdown ships as an **executable-only** Debian package (plain `setdown`, no
+`libghc-setdown-dev`). See "Naming convention" and "Open questions" below.
 
 ---
 
@@ -39,10 +45,14 @@ and tool-assisted rather than hand-written per package:
   by DHG members with commit access to that repo; a `dht` helper script wraps
   build/tag/upload steps.
 - **Naming convention**: source package `haskell-<name>`, binary dev package
-  `libghc-<name>-dev`. An end-user *executable* like setdown, once packaged, would ship as a
-  plain `setdown` binary package (see `shellcheck` below) built from a `haskell-shellcheck`-style
-  source package, alongside the usual `libghc-*` library packages if setdown's modules are
-  meant to be reusable by other Haskell packages.
+  `libghc-<name>-dev`. An end-user *executable* like setdown, once packaged, ships as a plain
+  `setdown` binary package (see `shellcheck` below) built from a `haskell-setdown`-style source
+  package. setdown is packaged **executable-only**: no `libghc-setdown-dev` binary package.
+  `cabal-debian` builds `libghc-*-dev`/`-prof`/`-doc` packages by default whenever a `library`
+  stanza is present, so the generated `debian/control` needs an explicit edit (or a
+  `cabal-debian` flag) to drop those stanzas and keep only the `setdown` executable package —
+  this is a required manual correction to `cabal-debian`'s default output, not something it
+  infers on its own.
 - **Concrete precedent for a CLI tool of this shape**: **ShellCheck** is exactly this pattern —
   a Hackage-published Haskell executable with no expectation that most users write Haskell
   against it as a library. It is packaged in DHG as `p/shellcheck` in `DHG_packages`, built with
@@ -138,20 +148,24 @@ version compatible with the current `.cabal` bounds (verified against GHC 9.6.6'
 versions, which satisfy all of setdown's `array`/`bytestring`/`text`/`containers`/`mtl`/
 `filepath` bounds as written).
 
-Options for the gap, in order of preference:
-1. **Package `table-layout` for Debian first**, as its own small ITP/upload, before or
-   alongside setdown's. It's a light dependency (`base`, `data-default-class`, `doclayout`,
-   `text`) so this is a modest amount of extra work, and it benefits any future Haskell
-   package that wants table output too.
-2. **Vendor a minimal replacement** for the one feature setdown uses from `table-layout`, to
-   drop the dependency. Only worth it if the used surface area is small — needs a quick check
-   of `PrintDefinition.hs`/wherever it's invoked before committing to this.
-3. Ask upstream `table-layout` maintainer if they'd support a Debian upload (unlikely to be
-   needed — DHG doesn't require upstream involvement, just an ITP).
+Three ways to close the gap, each written up as its own proposal since the choice has real
+consequences beyond this document:
 
-Option 1 is recommended: it's the standard DHG pattern (chase down and package missing leaf
-dependencies first) and avoids permanently coupling setdown's output formatting to whatever a
-vendored subset can do.
+1. **Package `table-layout` for Debian separately** (the standard DHG pattern: chase down and
+   package missing leaf dependencies first). Covered as the baseline in this document — it's a
+   light dependency (`base`, `data-default-class`, `doclayout`, `text`, both already packaged)
+   so it's a modest amount of extra work, and it benefits any future Haskell package that wants
+   table output too.
+2. **Reimplement** setdown's actual (small) usage of `table-layout` as an internal module,
+   dropping the dependency entirely. See
+   [15-reimplement-table-layout.md](15-reimplement-table-layout.md).
+3. **Bundle/vendor** `table-layout`'s upstream source into the setdown repository instead of
+   depending on a separately-packaged version. See
+   [16-bundle-table-layout.md](16-bundle-table-layout.md).
+
+No recommendation is made here between the three — that comparison belongs in 15/16 once both
+are written up, since it depends on engineering-effort and Debian-policy tradeoffs that go
+beyond this survey.
 
 ---
 
@@ -198,11 +212,11 @@ indefinitely.
 
 | Item | Track | Notes |
 |---|---|---|
-| Check `table-layout` usage surface in `PrintDefinition.hs` | A | Decide package-it-first vs. vendor |
-| File ITP for `table-layout` | A | Bug against `wnpp` |
-| Package & upload `table-layout` | A | `cabal-debian --official`, mentors.debian.net, sponsor |
-| File ITP for `setdown` | A | Bug against `wnpp`, references the `table-layout` ITP |
-| Run `cabal-debian --official` on setdown, hand-fix output | A/B | `debian/control`, `changelog`, `copyright`, `rules` |
+| Decide table-layout gap resolution (package / reimplement / bundle) | A | See 15/16 for the reimplement/bundle options |
+| File ITP for `table-layout` (only if "package separately" is chosen) | A | Bug against `wnpp` |
+| Package & upload `table-layout` (only if "package separately" is chosen) | A | `cabal-debian --official`, mentors.debian.net, sponsor |
+| File ITP for `setdown` | A | Bug against `wnpp`, references the `table-layout` ITP if applicable |
+| Run `cabal-debian --official` on setdown, hand-fix output | A/B | `debian/control` (drop `libghc-setdown-dev`/`-prof`/`-doc` stanzas — executable only), `changelog`, `copyright`, `rules` |
 | `debuild` + `lintian` clean build | A/B | Local verification before upload |
 | Get `salsa.debian.org/haskell-team/DHG_packages` write access or a sponsor | A | Via `debian-haskell` list |
 | Upload to mentors.debian.net, request sponsorship | A | |
@@ -214,15 +228,9 @@ indefinitely.
 
 ## Open questions
 
-- Does setdown want its modules exposed as a reusable **library** package
-  (`libghc-setdown-dev`) in Debian, or only the **executable**? ShellCheck ships as executable-
-  only; DHG's tooling supports either. Given setdown's `library` stanza already exists and is
-  used by the test suites, shipping both is low extra cost via `cabal-debian`, but the
-  `debian/control` binary package list should be decided explicitly rather than left to
-  whatever `cabal-debian` guesses.
-- Who packages/maintains `table-layout` for Debian long-term — is this proposal's author
-  volunteering to also become its Debian maintainer, or should upstream be asked first? This
-  affects sequencing more than feasibility.
+- Which of the three `table-layout` gap-resolution options (package separately / reimplement /
+  bundle) to take — see [15](15-reimplement-table-layout.md) and
+  [16](16-bundle-table-layout.md) for the tradeoffs of the latter two.
 - Timeline expectations: DHG sponsorship and archive transition (unstable → testing → stable)
   typically takes weeks to a few months, not days — this should be scoped as a background/
   low-urgency effort, not a release blocker.
