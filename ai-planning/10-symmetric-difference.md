@@ -1,7 +1,7 @@
 # Proposal: Symmetric Difference Operator
 
 **Date:** 2026-04-13
-**Related:** functionality-improvements.md suggestion #6
+**Related:** 04-functionality-improvements.md suggestion #6
 
 ---
 

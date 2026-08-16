@@ -1,7 +1,7 @@
 # Proposal: Parallelise Independent Definition Evaluation
 
 **Date:** 2026-04-13
-**Related:** functionality-improvements.md suggestion #7
+**Related:** 04-functionality-improvements.md suggestion #7
 
 ---
 

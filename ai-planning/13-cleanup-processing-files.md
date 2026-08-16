@@ -1,7 +1,7 @@
 # Proposal: Clean Up Intermediate Files via a Processing Subdirectory
 
 **Date:** 2026-04-14
-**Related:** functionality-improvements-2.md suggestion #1
+**Related:** 12-functionality-improvements-2.md suggestion #1
 
 ---
 

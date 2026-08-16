@@ -1,7 +1,7 @@
 # Proposal: Line and Column Numbers in Parse Errors
 
 **Date:** 2026-04-13
-**Related:** functionality-improvements.md suggestion #3
+**Related:** 04-functionality-improvements.md suggestion #3
 
 ---
 
