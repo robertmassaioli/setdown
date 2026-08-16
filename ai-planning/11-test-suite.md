@@ -1,7 +1,7 @@
 # Proposal: Add a Test Suite
 
 **Date:** 2026-04-14
-**Related:** functionality-improvements.md suggestion #8
+**Related:** 04-functionality-improvements.md suggestion #8
 
 ---
 

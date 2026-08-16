@@ -1,7 +1,7 @@
 # Proposal: Show Element Counts in the Results Summary
 
 **Date:** 2026-04-13
-**Related:** functionality-improvements.md suggestion #4
+**Related:** 04-functionality-improvements.md suggestion #4
 
 ---
 
