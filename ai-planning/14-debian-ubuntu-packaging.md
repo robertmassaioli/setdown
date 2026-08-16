@@ -112,6 +112,19 @@ stub.
   distro's build infrastructure.
 - Reasonable *complement* to the other two (e.g. attached to GitHub Releases today) but not a
   substitute for archive presence if the goal is `apt install setdown`.
+- **Would not survive archive review if ever submitted to Debian/Ubuntu.** Policy §4.13
+  ("Convenience copies of code") is written in terms of embedding another project's *source*
+  in your source package, not static linking of already-compiled code — so a static binary
+  doesn't violate its literal text. But `lintian`, the tool every archive upload runs through,
+  has a dedicated `statically-linked-binary` check (severity: **error**) whose own description
+  points straight back at §4.13's rationale: a security fix in a statically-linked dependency
+  can't reach users without a full rebuild of every package that embedded it, the same problem
+  §4.13 exists to prevent, just caught by a different-named tag. In practice this is moot for
+  this track as scoped above — it's explicitly *not* going into the official archive (GitHub
+  Releases / a self-hosted apt repo instead), so no `lintian` archive gate or ftpmaster review
+  ever runs against it. It's a second, independent reason (beyond "not archive-native" above)
+  this track can never become a Track A substitute: it would fail archive review outright if
+  that were ever attempted.
 
 ---
 
