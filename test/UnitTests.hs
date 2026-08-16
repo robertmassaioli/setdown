@@ -15,6 +15,7 @@ import SimpleDefinitionCycles  (getCyclesInSimpleDefinitions)
 import DuplicateElimination    (eliminateDuplicates, orderDefinitions)
 import SetInput                (parse)
 import SetInputVerification    (duplicateDefinitionName, unknownIdentifier)
+import TableRender             (Align (..), renderTable)
 
 main :: IO ()
 main = defaultMain tests
@@ -32,6 +33,7 @@ tests = testGroup "setdown"
    , parseTests
    , parseErrorTests
    , verificationTests
+   , tableRenderTests
    ]
 
 -- ---------------------------------------------------------------------------
@@ -336,4 +338,83 @@ verificationTests = testGroup "verification"
             ])
             @?= 1
       ]
+   ]
+
+-- ---------------------------------------------------------------------------
+-- Table rendering
+--
+-- The expected outputs for "two left-aligned columns" and "left, left,
+-- right" below were captured verbatim from setdown running against the
+-- real, upstream table-layout library (columnHeaderTableS/unicodeBoldHeaderS)
+-- before it was replaced by TableRender, to guarantee this reimplementation
+-- is byte-for-byte compatible with the table style setdown has always used.
+-- ---------------------------------------------------------------------------
+
+tableRenderTests :: TestTree
+tableRenderTests = testGroup "table rendering"
+   [ testCase "two left-aligned columns, matches table-layout output exactly" $
+       renderTable [AlignLeft, AlignLeft] ["From", "To"]
+          [ ["api-v1.txt", "./output/api-v1.txt.1.split.sorted"]
+          , ["api-v2.txt", "./output/api-v2.txt.1.split.sorted"]
+          ]
+       @?=
+          [ "┏━━━━━━━━━━━━┳━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓"
+          , "┃    From    ┃                 To                 ┃"
+          , "┡━━━━━━━━━━━━╇━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┩"
+          , "│ api-v1.txt │ ./output/api-v1.txt.1.split.sorted │"
+          , "│ api-v2.txt │ ./output/api-v2.txt.1.split.sorted │"
+          , "└────────────┴────────────────────────────────────┘"
+          ]
+   , testCase "left, left, right columns, matches table-layout output exactly" $
+       renderTable [AlignLeft, AlignLeft, AlignRight] ["Name", "File", "Count"]
+          [ ["Added", "./output/Added.txt", "4"]
+          , ["Removed", "./output/Removed.txt", "2"]
+          ]
+       @?=
+          [ "┏━━━━━━━━━┳━━━━━━━━━━━━━━━━━━━━━━┳━━━━━━━┓"
+          , "┃  Name   ┃         File         ┃ Count ┃"
+          , "┡━━━━━━━━━╇━━━━━━━━━━━━━━━━━━━━━━╇━━━━━━━┩"
+          , "│ Added   │ ./output/Added.txt   │     4 │"
+          , "│ Removed │ ./output/Removed.txt │     2 │"
+          , "└─────────┴──────────────────────┴───────┘"
+          ]
+   , testCase "column width grows to fit a right-aligned multi-digit value" $
+       renderTable [AlignLeft, AlignRight] ["Name", "Count"]
+          [ ["AllDeps", "12"]
+          , ["Shared", "7"]
+          ]
+       @?=
+          [ "┏━━━━━━━━━┳━━━━━━━┓"
+          , "┃  Name   ┃ Count ┃"
+          , "┡━━━━━━━━━╇━━━━━━━┩"
+          , "│ AllDeps │    12 │"
+          , "│ Shared  │     7 │"
+          , "└─────────┴───────┘"
+          ]
+   , testCase "cell narrower than its header is padded to the header width" $
+       renderTable [AlignLeft, AlignLeft] ["From", "To"] [["a", "b"]]
+       @?=
+          [ "┏━━━━━━┳━━━━┓"
+          , "┃ From ┃ To ┃"
+          , "┡━━━━━━╇━━━━┩"
+          , "│ a    │ b  │"
+          , "└──────┴────┘"
+          ]
+   , testCase "empty string cell is padded like any other cell" $
+       renderTable [AlignLeft, AlignLeft] ["From", "To"] [["", "x"]]
+       @?=
+          [ "┏━━━━━━┳━━━━┓"
+          , "┃ From ┃ To ┃"
+          , "┡━━━━━━╇━━━━┩"
+          , "│      │ x  │"
+          , "└──────┴────┘"
+          ]
+   , testCase "no rows still renders headers (deliberately unlike upstream table-layout, which drops header text and collapses width to zero when the row list is empty)" $
+       renderTable [AlignLeft, AlignLeft] ["From", "To"] []
+       @?=
+          [ "┏━━━━━━┳━━━━┓"
+          , "┃ From ┃ To ┃"
+          , "┡━━━━━━╇━━━━┩"
+          , "└──────┴────┘"
+          ]
    ]
