@@ -1,7 +1,7 @@
 # Proposal: Name Output Files After Their Definition
 
 **Date:** 2026-04-13
-**Related:** functionality-improvements.md suggestion #2
+**Related:** 04-functionality-improvements.md suggestion #2
 
 ---
 

@@ -161,7 +161,7 @@ in `src/ExternalSort.hs`. Sort time is bounded by the slowest single file rather
 the sum of all files.
 
 **Option B (topological level decomposition):** Not yet implemented. See
-`ai-planning/parallel-evaluation.md` for the full proposal.
+`ai-planning/09-parallel-evaluation.md` for the full proposal.
 
 ---
 
