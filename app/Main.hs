@@ -7,7 +7,6 @@ import qualified Data.Set               as S
 
 import qualified Data.Text.Lazy         as LT
 import qualified Data.Text.Lazy.IO      as T
-import qualified Text.Layout.Table      as Tab
 import           System.Console.CmdArgs
 import           System.Exit
 
@@ -25,6 +24,7 @@ import           PrintDefinition
 import           SetData
 import           SetInput
 import           SetInputVerification
+import           TableRender            (Align (..), renderTable)
 
 import           DuplicateElimination
 import           PerformOperations
@@ -267,29 +267,14 @@ printSortResult (unsortedFile, sortedFile) = do
       wrapInQuotes x = "\"" ++ x ++ "\""
 
 printTabularResults :: [(FilePath, FilePath)] -> IO ()
-printTabularResults fileMapping = sequence_ . fmap putStrLn $ Tab.tableLines (Tab.columnHeaderTableS columns Tab.unicodeBoldHeaderS headers rows)
-   where
-      headers = Tab.titlesH ["From", "To"]
-
-      columns =
-         [ Tab.column Tab.expand Tab.left Tab.noAlign Tab.noCutMark
-         , Tab.column Tab.expand Tab.left Tab.noAlign Tab.noCutMark
-         ]
-
-      rows = [Tab.rowsG $ fmap (\(from, to) -> [from, to]) fileMapping]
+printTabularResults fileMapping = mapM_ putStrLn $
+   renderTable [AlignLeft, AlignLeft] ["From", "To"]
+               (fmap (\(from, to) -> [from, to]) fileMapping)
 
 printTabularResultsWithCount :: [(String, FilePath, Int)] -> IO ()
-printTabularResultsWithCount rows = sequence_ . fmap putStrLn $ Tab.tableLines (Tab.columnHeaderTableS columns Tab.unicodeBoldHeaderS headers tableRows)
-   where
-      headers = Tab.titlesH ["Name", "File", "Count"]
-
-      columns =
-         [ Tab.column Tab.expand Tab.left  Tab.noAlign Tab.noCutMark
-         , Tab.column Tab.expand Tab.left  Tab.noAlign Tab.noCutMark
-         , Tab.column Tab.expand Tab.right Tab.noAlign Tab.noCutMark
-         ]
-
-      tableRows = [Tab.rowsG $ fmap (\(defName, fp, n) -> [defName, fp, show n]) rows]
+printTabularResultsWithCount rows = mapM_ putStrLn $
+   renderTable [AlignLeft, AlignLeft, AlignRight] ["Name", "File", "Count"]
+               (fmap (\(defName, fp, n) -> [defName, fp, show n]) rows)
 
 printComputedResults :: Options -> [(SimpleDefinition, FilePath, Int)] -> IO ()
 printComputedResults opts results = do

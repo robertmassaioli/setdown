@@ -5,6 +5,13 @@
 identified there. Compare with 16-bundle-table-layout.md (vendor upstream source instead of
 reimplementing).
 
+**Status: Implemented.** `src/TableRender.hs` replaces both call sites in `app/Main.hs`;
+`table-layout` is removed from `setdown.cabal` and `stack.yaml`. Output was verified
+byte-for-byte identical to the previous `table-layout`-based rendering by capturing real stdout
+before the change and diffing after. See the "Verification" and "Files changed" sections below
+for what was actually done, including one deliberate, documented behavior change (headers are
+always shown, even for zero rows — see the empty-rows note below).
+
 ---
 
 ## Problem
@@ -124,24 +131,46 @@ cells, wide-string handling, the generic style-combinator framework) setdown nev
 
 ---
 
-## Verification plan
+## Verification plan (as executed)
 
-Because this changes visible output, correctness must be checked by direct comparison, not
-just "the types line up":
+Because this changes visible output, correctness was checked by direct comparison, not just
+"the types line up":
 
-1. Build setdown on the current `main` (with `table-layout`) and capture the exact stdout of a
-   representative run that exercises both `printTabularResults` (the sort-mapping table) and
-   `printTabularResultsWithCount` (the results table), byte-for-byte, as a reference.
-2. Implement `TableRender` and swap the call sites.
-3. Re-run the same scenarios and diff stdout against the captured reference. They should match
-   exactly for typical (ASCII, non-empty) input.
-4. Add these captured outputs as new golden tests under `test/golden/` (the project already has
-   a `tasty-golden` test suite; the box-drawing tables are exactly the kind of "specify by
-   example" output golden testing is meant to protect) so a future change to `TableRender`
-   can't silently drift.
-5. Explicitly test the edge cases `table-layout` handles for free that a naive reimplementation
-   might not: empty row lists, empty string cells, and a column whose header is wider than
-   every cell in it (width must come from `max(header, cells)`, not `cells` alone).
+1. Built setdown against the pre-existing `table-layout`-based code and ran it against the
+   `examples/basic-difference` fixture with `--show-transient`, capturing stdout verbatim as a
+   reference — this exercises both `printTabularResults` (the sort-mapping table) and
+   `printTabularResultsWithCount` (the results table).
+2. Implemented `TableRender` and swapped the call sites (see "Files changed" below).
+3. Re-ran the same fixture and diffed stdout against the captured reference: **identical,
+   byte-for-byte** (`diff` exit code 0). Also spot-checked a second fixture
+   (`examples/software-dependencies`, 4 rows, a double-digit count) for visual sanity.
+4. Rather than file-based golden tests under `test/golden/` (that suite compares a written
+   `Result.txt` file, not stdout — the box tables were never in its scope, before or after this
+   change), added direct `tasty-hunit` assertions in `test/UnitTests.hs`'s new `tableRenderTests`
+   group calling `TableRender.renderTable` with the exact inputs/outputs captured in step 1, plus
+   the edge cases from step 5. This is simpler than wiring up stdout-capturing golden tests and
+   gives the same protection against future drift.
+5. Explicitly tested the edge cases `table-layout` handles that a naive reimplementation might
+   not — by running them through the **real upstream library** directly (a standalone script
+   importing `Text.Layout.Table`, run via `stack exec -- runghc`) to get ground truth before
+   writing the corresponding `TableRender` tests:
+   - **Empty string cell**: matches `table-layout` exactly (padded like any other cell).
+   - **A cell narrower than its header**: matches `table-layout` exactly (width comes from
+     `max(header, cells)`, not `cells` alone).
+   - **Zero rows**: `table-layout` has a surprising quirk here — with zero data rows, it drops
+     the header *text* entirely and collapses every column to zero width (e.g. `┏━━┳━━┓` /
+     `┃  ┃  ┃` for a `["From", "To"]` header with no rows, rather than showing the header at
+     full width). This looks like an edge-case bug in the upstream library rather than
+     intentional behavior — nothing else in its width calculation drops the header, and the
+     3.2k-line codebase gives no indication this is deliberate. **`TableRender` deliberately
+     does not reproduce this quirk**: it always sizes columns from `max(header, cells)`, so
+     headers stay visible even with zero rows. This is a disclosed, intentional divergence, not
+     a fidelity gap — see the "no rows" test case in `tableRenderTests`. In practice this path is
+     close to unreachable in real usage: `printTabularResultsWithCount` is always called under an
+     `unless (null …)` guard, and `printTabularResults` can only receive an empty list if a
+     `.setdown` file's definitions reference zero underlying files, which — because every set
+     expression must bottom out at literal files — could only happen for a degenerate/empty
+     definitions file.
 
 ---
 
@@ -200,19 +229,19 @@ was never actually being exercised.
 
 ---
 
-## Files changed
+## Files changed (as implemented)
 
 | File | Change |
 |------|--------|
-| `src/TableRender.hs` (new) | Fixed-style Unicode box table renderer: `renderTable`, `Align` |
-| `app/Main.hs` | Replace `Tab.*` calls in `printTabularResults`/`printTabularResultsWithCount` with `TableRender.renderTable`; drop `import qualified Text.Layout.Table as Tab` |
-| `src/Main.hs` | Same change (this file is presently an exact duplicate of `app/Main.hs` — see note below) |
-| `setdown.cabal` | Remove `table-layout` from `build-depends`; add `TableRender` to `exposed-modules` or executable's `other-modules` |
-| `test/golden/` | Add golden-test fixtures capturing exact table output, both before/after as the verification step |
+| `src/TableRender.hs` (new) | Fixed-style Unicode box table renderer: `renderTable`, `Align(AlignLeft, AlignRight)` |
+| `app/Main.hs` | Replaced `Tab.*` calls in `printTabularResults`/`printTabularResultsWithCount` with `TableRender.renderTable`; dropped `import qualified Text.Layout.Table as Tab` |
+| `setdown.cabal` | Removed `table-layout` from the executable's `build-depends`; added `TableRender` to the library's `exposed-modules` |
+| `stack.yaml` / `stack.yaml.lock` | Removed the `table-layout-1.0.0.2` `extra-deps` pin (it wasn't in the `lts-24.36` snapshot, hence the pin) and its resolved lock entry |
+| `test/UnitTests.hs` | Added a `tableRenderTests` group (6 cases) exercising `TableRender.renderTable` directly, in place of the file-based golden tests originally proposed — see "Verification plan" above for why |
 
-**Note:** `src/Main.hs` and `app/Main.hs` are currently byte-identical, but only `app/Main.hs`
-is wired into the cabal executable stanza (`hs-source-dirs: app`). `src/Main.hs` appears to be
-unreferenced leftover from an earlier restructure. Worth a one-line confirmation (`grep
-hs-source-dirs setdown.cabal`) before deciding whether to update both files or delete the
-orphan — out of scope for this proposal but flagged since it directly affects which file(s) to
-edit.
+**`src/Main.hs` was deliberately left untouched.** It's byte-identical to `app/Main.hs` (and
+still references `Text.Layout.Table`), but `setdown.cabal`'s executable stanza uses
+`hs-source-dirs: app`, not `src` — confirmed via `grep hs-source-dirs setdown.cabal` — so
+`src/Main.hs` is not compiled by any target and this change doesn't affect the build. It's an
+unreferenced leftover from an earlier restructure (see `03-src-directory-restructure.md`);
+cleaning it up is a separate, out-of-scope concern from this proposal.
