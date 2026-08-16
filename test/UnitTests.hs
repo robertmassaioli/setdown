@@ -6,12 +6,15 @@ import Test.Tasty.HUnit
 
 import qualified Data.Text.Lazy              as T
 import qualified Data.ByteString.Lazy.Char8  as BC
+import           Data.List                   (isInfixOf)
+import           Control.Exception           (SomeException, evaluate, try)
 
 import PerformOperations       (linesSetOperation, operatorTools)
 import SetData
 import SimpleDefinitionCycles  (getCyclesInSimpleDefinitions)
 import DuplicateElimination    (eliminateDuplicates, orderDefinitions)
 import SetInput                (parse)
+import SetInputVerification    (duplicateDefinitionName, unknownIdentifier)
 
 main :: IO ()
 main = defaultMain tests
@@ -27,6 +30,8 @@ tests = testGroup "setdown"
    , cycleDetectionTests
    , duplicateEliminationTests
    , parseTests
+   , parseErrorTests
+   , verificationTests
    ]
 
 -- ---------------------------------------------------------------------------
@@ -85,6 +90,10 @@ unionTests = testGroup "union"
        lso Or ["a", "b"] [] @?= ["a", "b"]
    , testCase "both empty → empty" $
        lso Or [] [] @?= []
+   , testCase "single distinct elements → both kept" $
+       lso Or ["x"] ["y"] @?= ["x", "y"]
+   , testCase "single identical elements → one kept" $
+       lso Or ["x"] ["x"] @?= ["x"]
    ]
 
 -- ---------------------------------------------------------------------------
@@ -106,6 +115,10 @@ differenceTests = testGroup "difference"
    , testCase "A - B ≠ B - A (not commutative)" $ do
        lso Difference ["a", "b"] ["a"] @?= ["b"]
        lso Difference ["a"] ["a", "b"] @?= []
+   , testCase "single identical elements → empty" $
+       lso Difference ["x"] ["x"] @?= []
+   , testCase "single distinct elements → left unchanged" $
+       lso Difference ["x"] ["y"] @?= ["x"]
    ]
 
 -- ---------------------------------------------------------------------------
@@ -132,6 +145,10 @@ symmetricDifferenceTests = testGroup "symmetric difference"
            b = ["b", "c", "d"]
        in lso SymmetricDifference a b
             @?= lso Or (lso Difference a b) (lso Difference b a)
+   , testCase "single identical elements → empty" $
+       lso SymmetricDifference ["x"] ["x"] @?= []
+   , testCase "single distinct elements → both kept" $
+       lso SymmetricDifference ["x"] ["y"] @?= ["x", "y"]
    ]
 
 -- ---------------------------------------------------------------------------
@@ -223,4 +240,100 @@ parseTests = testGroup "parse"
        length (parse (BC.pack "A: (\"a.txt\" /\\ \"b.txt\")")) @?= 1
    , testCase "comment is ignored" $
        length (parse (BC.pack "-- just a comment\nA: \"a.txt\"")) @?= 1
+   ]
+
+-- ---------------------------------------------------------------------------
+-- Parse errors
+-- ---------------------------------------------------------------------------
+
+-- | Force full evaluation of a parse so that any error thrown from within
+-- the lazy parse tree is raised here, where we can catch it.
+parseFailure :: String -> IO (Either SomeException String)
+parseFailure input = try (evaluate (show (parse (BC.pack input))))
+
+assertParseFailureContains :: String -> [String] -> IO ()
+assertParseFailureContains input expectedFragments = do
+   result <- parseFailure input
+   case result of
+      Left e ->
+         let msg = show e
+         in mapM_ (\frag -> assertBool
+                     ("expected \"" ++ frag ++ "\" in error message: " ++ msg)
+                     (frag `isInfixOf` msg))
+                  expectedFragments
+      Right _ -> assertFailure "expected a parse error, but parsing succeeded"
+
+parseErrorTests :: TestTree
+parseErrorTests = testGroup "parse errors"
+   [ testCase "two filenames with no operator reports line and column" $
+       assertParseFailureContains
+         "A: \"a.txt\" \"b.txt\""
+         ["line 1", "column 12", "unexpected"]
+   , testCase "unexpected token reports the correct line in multi-line input" $
+       assertParseFailureContains
+         "A: \"a.txt\"\nB: \"b.txt\" \"c.txt\""
+         ["line 2", "column 12"]
+   , testCase "unrecognised character is reported as a lexical error" $
+       assertParseFailureContains
+         "A: @"
+         ["lexical error", "line 1", "column 4"]
+   , testCase "unrecognised character on a later line reports that line" $
+       assertParseFailureContains
+         "A: \"a.txt\"\nB: \"b.txt\"\nC: @"
+         ["lexical error", "line 3", "column 4"]
+   ]
+
+-- ---------------------------------------------------------------------------
+-- Verification: duplicate names and unknown identifiers
+-- ---------------------------------------------------------------------------
+
+mkRawDef :: String -> Expression -> Definition
+mkRawDef name expr = Definition (T.pack name) expr
+
+verificationTests :: TestTree
+verificationTests = testGroup "verification"
+   [ testGroup "duplicate definition names"
+      [ testCase "no duplicates → no errors" $
+          duplicateDefinitionName
+            [ mkRawDef "A" (FileExpression "a.txt")
+            , mkRawDef "B" (FileExpression "b.txt")
+            ]
+            @?= []
+      , testCase "one name defined twice → one error" $
+          length (duplicateDefinitionName
+            [ mkRawDef "A" (FileExpression "a.txt")
+            , mkRawDef "A" (FileExpression "b.txt")
+            ])
+            @?= 1
+      , testCase "one name defined three times → still one grouped error" $
+          length (duplicateDefinitionName
+            [ mkRawDef "A" (FileExpression "a.txt")
+            , mkRawDef "A" (FileExpression "b.txt")
+            , mkRawDef "A" (FileExpression "c.txt")
+            ])
+            @?= 1
+      ]
+   , testGroup "unknown identifiers"
+      [ testCase "no references → no errors" $
+          unknownIdentifier
+            [ mkRawDef "A" (FileExpression "a.txt") ]
+            @?= []
+      , testCase "reference to a defined identifier → no errors" $
+          unknownIdentifier
+            [ mkRawDef "A" (FileExpression "a.txt")
+            , mkRawDef "B" (IdentifierExpression "A")
+            ]
+            @?= []
+      , testCase "reference to an undefined identifier → one error" $
+          length (unknownIdentifier
+            [ mkRawDef "A" (IdentifierExpression "B") ])
+            @?= 1
+      , testCase "undefined identifier used inside a binary expression → one error" $
+          length (unknownIdentifier
+            [ mkRawDef "A" (BinaryExpression And
+                (FileExpression "a.txt")
+                (IdentifierExpression "Missing"))
+            ])
+            @?= 1
+      ]
    ]
