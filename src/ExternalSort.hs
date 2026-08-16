@@ -63,7 +63,7 @@ splitFile ctx inputFile = do
    sequence_ . fmap (uncurry T.writeFile) $ namesAndContents
    return . fmap fst $ namesAndContents
    where
-      names = map (\num -> cOutputDir ctx </> inputFile ++ "." ++ show num ++ ".split") [(1 :: Integer)..]
+      names = map (\num -> cProcessingDir ctx </> inputFile ++ "." ++ show num ++ ".split") [(1 :: Integer)..]
 
 mergeFiles :: Context -> [FilePath] -> IO FilePath
 mergeFiles _ [] = error "Tried to merge no files..."
@@ -77,7 +77,7 @@ directMergeFiles :: Context -> [FilePath] -> IO FilePath
 directMergeFiles ctx fps = do
    fileContents <- fmap T.lines <$> mapM T.readFile fps
    randomFilename <- fmap show UUID.nextRandom
-   let newFile = cOutputDir ctx </> randomFilename
+   let newFile = cProcessingDir ctx </> randomFilename
    writeFileLines newFile . merge $ fileContents
    return newFile
 
