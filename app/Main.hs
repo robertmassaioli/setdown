@@ -7,6 +7,7 @@ import qualified Data.Set               as S
 
 import qualified Data.Text.Lazy         as LT
 import qualified Data.Text.Lazy.IO      as T
+import           GHC.IO.Encoding        (setLocaleEncoding, utf8)
 import           System.Console.CmdArgs
 import           System.Exit
 
@@ -135,6 +136,12 @@ getInputFileOrFail Nothing = do
 -- for one
 main :: IO ()
 main = do
+   -- setdown prints Unicode box-drawing characters in its results tables. Force
+   -- UTF-8 regardless of the ambient locale so this doesn't crash on systems
+   -- without one configured (e.g. minimal Debian/Ubuntu installs and most CI
+   -- images default to the C/POSIX locale).
+   setLocaleEncoding utf8
+
    opts <- cmdArgs options
 
    inputFilePath <- getInputFileOrFail (setdownFile opts)
