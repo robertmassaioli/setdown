@@ -2,12 +2,21 @@
 
 **Date:** 2026-08-16
 **Related:** README.markdown installation section (nix-shell, Hackage/stack); the `table-layout`
-gap identified below is explored further in
-[15-reimplement-table-layout.md](15-reimplement-table-layout.md) and
-[16-bundle-table-layout.md](16-bundle-table-layout.md)
+gap identified below was resolved by implementing
+[15-reimplement-table-layout.md](15-reimplement-table-layout.md) (merged — see status note
+below). [16-bundle-table-layout.md](16-bundle-table-layout.md) covers the vendoring alternative
+that was considered and not taken.
 
 **Decision:** setdown ships as an **executable-only** Debian package (plain `setdown`, no
 `libghc-setdown-dev`). See "Naming convention" and "Open questions" below.
+
+**Status update (2026-08-16):** the `table-layout` dependency gap described below is **resolved
+and no longer a blocker**. `table-layout` has been replaced by an internal `TableRender` module
+(`src/TableRender.hs`), removed from `setdown.cabal` and `stack.yaml` entirely, and merged into
+`main`. Track A no longer needs a `table-layout` ITP at all — setdown's dependency list is now
+100% already-packaged GHC boot libraries and archive packages (see the updated dependency audit
+below). The rest of this document (Tracks A/B/C, sponsorship process, work items) is otherwise
+unchanged.
 
 ---
 
@@ -132,7 +141,8 @@ stub.
 
 `cabal-debian` will do this mapping automatically, but it's worth checking upfront whether any
 dependency is a hard blocker. Checked against Debian trixie/sid (`packages.debian.org`,
-2026-08):
+2026-08); updated 2026-08-16 to drop `table-layout` following its removal (see status note
+above):
 
 | `setdown.cabal` dependency | Debian package | Status |
 |---|---|---|
@@ -148,37 +158,27 @@ dependency is a hard blocker. Checked against Debian trixie/sid (`packages.debia
 | `async` | `libghc-async-dev` | ✅ packaged, 2.2.5 in sid |
 | `cmdargs` | `libghc-cmdargs-dev` | ✅ packaged, 0.10.22 in sid |
 | `unix` (non-Windows) | `libghc-unix-dev` | GHC boot library |
-| `table-layout` | — | ❌ **not packaged in Debian** |
 | `alex` (build-tool) | `alex` | ✅ packaged, 3.5.4.0 in sid |
 | `happy` (build-tool) | `happy` | ✅ packaged, 2.1.7 in sid |
 | `tasty` / `tasty-hunit` / `tasty-quickcheck` / `tasty-golden` / `QuickCheck` (test-only) | `libghc-tasty-dev` etc. | ✅ all packaged |
 
-**The one gap is `table-layout`** (used only in `app/Main.hs`, for the results table
-formatting — not in the library). It's a small, actively-maintained package (latest 1.0.0.2,
-released 2026-05-18) with few reverse dependencies, but nobody has packaged it for Debian yet.
-Everything else setdown depends on is either a GHC boot library or already in the archive at a
-version compatible with the current `.cabal` bounds (verified against GHC 9.6.6's boot library
-versions, which satisfy all of setdown's `array`/`bytestring`/`text`/`containers`/`mtl`/
-`filepath` bounds as written).
+**No gaps remain.** `table-layout` was the one dependency not packaged for Debian (used only in
+`app/Main.hs`, for the results table formatting — not in the library). Rather than packaging it
+separately or vendoring its source, setdown's own (small) usage of it was reimplemented as an
+internal `TableRender` module — see
+[15-reimplement-table-layout.md](15-reimplement-table-layout.md), now implemented and merged —
+and the dependency was dropped entirely from `setdown.cabal` and `stack.yaml`. Everything setdown
+now depends on is either a GHC boot library or already in the Debian archive at a version
+compatible with the current `.cabal` bounds (verified against GHC 9.6.6's boot library versions).
 
-Three ways to close the gap, each written up as its own proposal since the choice has real
-consequences beyond this document:
-
-1. **Package `table-layout` for Debian separately** (the standard DHG pattern: chase down and
-   package missing leaf dependencies first). Covered as the baseline in this document — it's a
-   light dependency (`base`, `data-default-class`, `doclayout`, `text`, both already packaged)
-   so it's a modest amount of extra work, and it benefits any future Haskell package that wants
-   table output too.
-2. **Reimplement** setdown's actual (small) usage of `table-layout` as an internal module,
-   dropping the dependency entirely. See
-   [15-reimplement-table-layout.md](15-reimplement-table-layout.md).
-3. **Bundle/vendor** `table-layout`'s upstream source into the setdown repository instead of
-   depending on a separately-packaged version. See
-   [16-bundle-table-layout.md](16-bundle-table-layout.md).
-
-No recommendation is made here between the three — that comparison belongs in 15/16 once both
-are written up, since it depends on engineering-effort and Debian-policy tradeoffs that go
-beyond this survey.
+Three options for closing the gap were considered and written up (see
+[15-reimplement-table-layout.md](15-reimplement-table-layout.md) and
+[16-bundle-table-layout.md](16-bundle-table-layout.md) for the full comparison): packaging
+`table-layout` separately for Debian, reimplementing setdown's usage internally, or vendoring
+`table-layout`'s upstream source into this repo. **Reimplementation (option 2) was chosen and
+implemented** — it removed the dependency everywhere (not just for Debian packaging purposes),
+avoided the Debian Policy §4.13 concerns that ruled out vendoring (see 16), and needed no
+separate ITP or sponsorship cycle for a second package.
 
 ---
 
@@ -188,9 +188,8 @@ beyond this survey.
 
 1. **Track A — Debian archive via DHG (primary target).** This is the one that also gets
    Ubuntu for free via sync/merge, so it dominates in leverage per unit of effort.
-   - File an ITP bug against `wnpp` for `table-layout`, then a second for `setdown`.
-   - Package `table-layout` first (`cabal-debian --official` + review), get it sponsored/
-     uploaded.
+   - File an ITP bug against `wnpp` for `setdown`. (No `table-layout` ITP needed — the gap is
+     resolved; see the status note and dependency audit above.)
    - Run `cabal-debian --official` against setdown's own `.cabal`, review/fix the generated
      `debian/control`, `changelog`, `copyright`, `rules` (per the DHG "Getting Started" checklist:
      fix `X-Description`, correct any `libghc-haskell-*` → `libghc-*` naming slips, add
@@ -199,18 +198,14 @@ beyond this survey.
    - Upload to `mentors.debian.net`, find a DD sponsor (likely via the `debian-haskell`
      mailing list, given the ShellCheck precedent shows the team is receptive to small CLI
      tools), get it into unstable.
-   - No code changes to setdown are required for this track beyond resolving the
-     `table-layout` gap — `cabal-debian` consumes the existing `.cabal` file as-is.
+   - No code changes to setdown are required for this track — `cabal-debian` consumes the
+     existing `.cabal` file as-is.
 
 2. **Track B — Ubuntu PPA (fast, stopgap).** Can run in parallel with Track A and ships
-   something usable to Ubuntu users immediately, without waiting on DHG sponsorship or the
-   `table-layout` prerequisite:
+   something usable to Ubuntu users immediately, without waiting on DHG sponsorship:
    - Same `debian/` directory as Track A (or a lightly modified copy), built and uploaded via
      `dput` against a personal PPA for the Ubuntu series currently in support (e.g. `noble`,
      `oracular`).
-   - Because it's self-contained (not gated on `table-layout` being in Debian's archive — the
-     PPA build environment can pull it in as an additional package built into the *same* PPA),
-     this can land well before Track A completes.
    - Needs re-triggering per new Ubuntu series; acceptable as a stopgap, not a substitute for
      Track A.
 
@@ -225,10 +220,8 @@ indefinitely.
 
 | Item | Track | Notes |
 |---|---|---|
-| Decide table-layout gap resolution (package / reimplement / bundle) | A | See 15/16 for the reimplement/bundle options |
-| File ITP for `table-layout` (only if "package separately" is chosen) | A | Bug against `wnpp` |
-| Package & upload `table-layout` (only if "package separately" is chosen) | A | `cabal-debian --official`, mentors.debian.net, sponsor |
-| File ITP for `setdown` | A | Bug against `wnpp`, references the `table-layout` ITP if applicable |
+| ~~Decide table-layout gap resolution~~ | A | **Done** — reimplemented internally, see 15 |
+| File ITP for `setdown` | A | Bug against `wnpp`; no `table-layout` ITP needed |
 | Run `cabal-debian --official` on setdown, hand-fix output | A/B | `debian/control` (drop `libghc-setdown-dev`/`-prof`/`-doc` stanzas — executable only), `changelog`, `copyright`, `rules` |
 | `debuild` + `lintian` clean build | A/B | Local verification before upload |
 | Get `salsa.debian.org/haskell-team/DHG_packages` write access or a sponsor | A | Via `debian-haskell` list |
@@ -241,9 +234,8 @@ indefinitely.
 
 ## Open questions
 
-- Which of the three `table-layout` gap-resolution options (package separately / reimplement /
-  bundle) to take — see [15](15-reimplement-table-layout.md) and
-  [16](16-bundle-table-layout.md) for the tradeoffs of the latter two.
+- ~~Which of the three `table-layout` gap-resolution options to take~~ — **resolved**:
+  reimplementation (option 2, [15](15-reimplement-table-layout.md)), now merged.
 - Timeline expectations: DHG sponsorship and archive transition (unstable → testing → stable)
   typically takes weeks to a few months, not days — this should be scoped as a background/
   low-urgency effort, not a release blocker.

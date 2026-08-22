@@ -23,8 +23,8 @@ description:         There will be times when you have lots of set data and you 
                      built with the intention that you would use it in conjunction with version
                      control tools to manage your set data and set description file.
 
-homepage:            http://bitbucket.org/robertmassaioli/setdown
-bug-reports:         https://bitbucket.org/robertmassaioli/setdown/issues
+homepage:            https://github.com/robertmassaioli/setdown
+bug-reports:         https://github.com/robertmassaioli/setdown/issues
 
 -- The license under which the package is released.
 license:             BSD3
@@ -37,7 +37,7 @@ author:              Robert Massaioli
 
 -- An email address to which users can send suggestions, bug reports, and
 -- patches.
-maintainer:          robertmassaioli@gmail.com
+maintainer:          setdown@rmdir.app
 
 -- A copyright notice.
 copyright:           (c) 2015 Robert Massaioli
@@ -55,7 +55,7 @@ cabal-version:       >=1.10
 
 source-repository head
    type: git
-   location: git@bitbucket.org:robertmassaioli/setdown.git
+   location: https://github.com/robertmassaioli/setdown.git
 
 library
   exposed-modules:     SetLanguage
@@ -75,17 +75,17 @@ library
 
   build-depends:       base            >=4.7 && < 5
                        -- Lexing dependencies
-                       , array         >= 0.5  && < 0.6
-                       , bytestring    >= 0.10 && < 0.13
-                       , text          >= 1.2  && < 2.2
+                       , array         >= 0.5  && < 1
+                       , bytestring    >= 0.10 && < 1
+                       , text          >= 1.2  && < 3
                        -- Module Dependencies
                        , filepath      >= 1.2  && < 3
                        , directory     >= 1.1  && < 3
-                       , containers    >= 0.6  && < 0.8
-                       , uuid          >= 1.3  && < 1.4
-                       , split         == 0.2.*
-                       , mtl           >= 2.2  && < 2.4
-                       , async         >= 2.2  && < 2.3
+                       , containers    >= 0.6  && < 1
+                       , uuid          >= 1.3  && < 2
+                       , split         >= 0.2  && < 1
+                       , mtl           >= 2.2  && < 3
+                       , async         >= 2.2  && < 3
 
   build-tools:         alex, happy
 
@@ -100,15 +100,15 @@ executable setdown
 
   build-depends:       base            >=4.7 && < 5
                        , setdown
-                       , bytestring    >= 0.10 && < 0.13
-                       , text          >= 1.2  && < 2.2
-                       , containers    >= 0.6  && < 0.8
+                       , bytestring    >= 0.10 && < 1
+                       , text          >= 1.2  && < 3
+                       , containers    >= 0.6  && < 1
                        , directory     >= 1.1  && < 3
                        , filepath      >= 1.2  && < 3
-                       , cmdargs       >= 0.10 && < 0.11
+                       , cmdargs       >= 0.10 && < 1
 
   if !os(windows)
-    build-depends:     unix >= 2.7 && < 2.9
+    build-depends:     unix >= 2.7 && < 3
 
   hs-source-dirs:      app
 
@@ -123,10 +123,10 @@ test-suite setdown-tests
 
   build-depends:       base            >=4.7 && < 5
                        , setdown
-                       , tasty         >= 1.4  && < 1.6
-                       , tasty-hunit   >= 0.10 && < 0.11
-                       , text          >= 1.2  && < 2.2
-                       , bytestring    >= 0.10 && < 0.13
+                       , tasty         >= 1.4  && < 2
+                       , tasty-hunit   >= 0.10 && < 1
+                       , text          >= 1.2  && < 3
+                       , bytestring    >= 0.10 && < 1
 
   default-language:    Haskell2010
 
@@ -139,10 +139,10 @@ test-suite setdown-property-tests
 
   build-depends:       base               >=4.7 && < 5
                        , setdown
-                       , tasty            >= 1.4  && < 1.6
-                       , tasty-quickcheck >= 0.10 && < 0.12
-                       , QuickCheck       >= 2.14 && < 2.17
-                       , text             >= 1.2  && < 2.2
+                       , tasty            >= 1.4  && < 2
+                       , tasty-quickcheck >= 0.10 && < 1
+                       , QuickCheck       >= 2.14 && < 3
+                       , text             >= 1.2  && < 3
 
   default-language:    Haskell2010
 
@@ -154,11 +154,11 @@ test-suite setdown-golden-tests
   hs-source-dirs:      test
 
   build-depends:       base            >=4.7 && < 5
-                       , tasty         >= 1.4  && < 1.6
-                       , tasty-golden  >= 2.3  && < 2.4
-                       , tasty-hunit   >= 0.10 && < 0.11
+                       , tasty         >= 1.4  && < 2
+                       , tasty-golden  >= 2.3  && < 3
+                       , tasty-hunit   >= 0.10 && < 1
                        , filepath      >= 1.2  && < 3
-                       , process       >= 1.6  && < 1.7
+                       , process       >= 1.6  && < 2
 
   default-language:    Haskell2010
 
