@@ -1,0 +1,349 @@
+.\" Man page for setdown. Keep the .TH date/version in sync with setdown.cabal on release.
+.TH SETDOWN 1 "2026-08-22" "setdown 0.2.0.0" "User Commands"
+.SH NAME
+setdown \- evaluate a \fB.setdown\fR file to perform set operations on line\-based text files
+.SH SYNOPSIS
+.B setdown
+[\fB\-i\fR \fIFILE\fR]
+[\fB\-o\fR \fIDIR\fR]
+[\fB\-\-show\-transient\fR]
+[\fB\-\-keep\-processing\fR]
+.br
+.B setdown
+\fB\-\-help\fR
+.br
+.B setdown
+\fB\-\-version\fR
+.SH DESCRIPTION
+.B setdown
+treats text files as sets \(em one element per line \(em and lets you combine them with
+intersection, union, difference, and symmetric difference. The operations are described once in a
+\fB.setdown\fR definitions file, similar in spirit to a
+.BR Makefile ,
+and
+.B setdown
+resolves the whole dependency graph between definitions, computes every one of them, and writes
+one result file per definition into an output directory.
+.PP
+Input files do not need to be sorted, de\-duplicated, or already act like sets; \fBsetdown\fR
+normalizes them as it goes. Every path written inside a \fB.setdown\fR file \(em both the input
+files it reads and the \fB\-\-output\fR directory it writes to \(em is resolved relative to the
+location of that \fB.setdown\fR file, never relative to the current working directory. This makes
+a \fB.setdown\fR file's behaviour independent of where you happen to invoke
+.B setdown
+from.
+.PP
+If no \fB.setdown\fR file is given explicitly with \fB\-\-input\fR,
+.B setdown
+looks for exactly one \fB.setdown\fR file in the current directory and uses it automatically.
+.SH OPTIONS
+.TP
+\fB\-o\fR, \fB\-\-output\fR[=\fIDIR\fR]
+Directory in which to place output files, given relative to the \fB.setdown\fR file being
+evaluated (not the current working directory). Defaults to
+.I output
+if this option is omitted entirely.
+.TP
+\fB\-i\fR, \fB\-\-input\fR=\fIFILE\fR
+The \fB.setdown\fR definitions file to evaluate. If omitted,
+.B setdown
+looks for a single \fB.setdown\fR file in the current directory and uses it automatically. Exits
+with an error if zero, or more than one, are found (see \fBEXIT STATUS\fR below).
+.TP
+\fB\-\-show\-transient\fR
+Also print intermediate results for the sub\-expressions
+.B setdown
+generates internally while evaluating your definitions, in addition to the named definitions
+themselves. Useful when a definition's expression is complex and you want to see each
+intersection/union/difference/symmetric\-difference step that led to the final result.
+.TP
+\fB\-\-keep\-processing\fR
+Keep the scratch
+.I processing/
+subdirectory (see \fBFILES\fR below) after the run completes, instead of deleting it. Useful for
+inspecting the intermediate files behind a definition when debugging unexpected output.
+.TP
+\fB\-?\fR, \fB\-\-help\fR
+Display a short help message summarising these options, then exit.
+.TP
+\fB\-V\fR, \fB\-\-version\fR
+Print version information, then exit.
+.SH THE .setdown FILE FORMAT
+A \fB.setdown\fR file is a plain text file containing one or more
+.I definitions,
+each of the form:
+.PP
+.RS
+.I name\fR: \fIexpression\fR
+.RE
+.PP
+.B setdown
+evaluates every definition in the file and writes one result file per definition (see
+\fBOUTPUT\fR). Definitions may appear in any order \(em a definition may reference another
+definition that is written later in the same file, since
+.B setdown
+resolves all names after parsing the whole file.
+.SS Identifiers
+A definition's name may contain letters, digits, hyphens, and underscores
+.RI ( [a\-zA\-Z0\-9_\-]+ ).
+Spaces and other punctuation are not permitted. Examples of valid names:
+.IR mySet ", " result\-2 ", " Final_Output .
+.SS Filenames
+A file is referenced by writing its path in double quotes, e.g.\&
+.IR \(dqusers.txt\(dq .
+The path may contain spaces and is resolved relative to the location of the \fB.setdown\fR file
+itself, not the current working directory and not any \fB\-\-output\fR directory.
+.SS Operators
+An expression combines files and other definitions using one of four binary set operators. Each
+has an ASCII spelling, which always works, and an equivalent single\-character Unicode symbol,
+which may or may not render depending on your terminal and locale:
+.TP
+.B Intersection
+.B /\e
+(Unicode: the intersection symbol, U+2229)
+(elements present in both operands)
+.TP
+.B Union
+.B \e/
+(Unicode: the union symbol, U+222A)
+(elements present in either operand)
+.TP
+.B Difference
+.B \-
+(elements in the left operand that are not in the right operand; not commutative \(em
+.I A
+\-
+.I B
+is not the same as
+.I B
+\-
+.IR A )
+.TP
+.B Symmetric difference
+.B ><
+(Unicode: the white up\-pointing small triangle, U+25B3)
+(elements present in exactly one of the two operands; equivalent to
+.RI ( A " \- " B ")" " \e/ " "(" B " \- " A ),
+but computed in a single pass)
+.PP
+Intersection, union, and symmetric difference are commutative
+.RI ( A " op " B
+is the same as
+.IR B " op " A ).
+Difference is the only operator that is not.
+.SS Bracketing and precedence
+.B setdown
+defines
+.B no
+operator precedence. An expression combining more than one operator without brackets, such as
+.PP
+.RS
+.nf
+def: A /\e B \e/ C
+.fi
+.RE
+.PP
+is a parse error, because there is no single unambiguous reading: it could mean
+.RI "(" A " /\e " B ") \e/ " C
+or
+.RI "" A " /\e (" B " \e/ " C ")" ,
+and substituting the empty set for
+.I B
+gives two genuinely different results depending on which reading is intended. Rather than pick one
+silently,
+.B setdown
+requires every such expression to be bracketed explicitly:
+.PP
+.RS
+.nf
+def: (A /\e B) \e/ C
+.fi
+.RE
+.SS Referencing other definitions
+An expression's operand may be a quoted filename, another definition's name, or a bracketed
+sub\-expression. Because a bare identifier is itself a valid expression, one definition may simply
+alias another:
+.PP
+.RS
+.nf
+Combined: "a.txt" \e/ "b.txt"
+Alias:    Combined
+.fi
+.RE
+.SS Comments
+Everything from a double dash
+.RB ( \-\- )
+to the end of the line is a comment, wherever it appears on the line:
+.PP
+.RS
+.nf
+\-\- This is a definition for A, created because we wanted to do X
+A: "y.txt" \- "z.txt"
+
+B: (A \e/ C) \-\- \e/ D   This is still a comment and \e/ D never happens
+.fi
+.RE
+.SS Circular definitions
+Definitions must not form a cycle:
+.PP
+.RS
+.nf
+A: "file.txt" \e/ B
+B: A /\e "other.txt"
+.fi
+.RE
+.PP
+.B setdown
+detects cycles like this before performing any set operations and exits with status 20 (see
+\fBEXIT STATUS\fR), printing the cyclic chain of definition names it found.
+.SS A complete example
+.RS
+.nf
+\-\- A is the intersection of the file b\-1.out and the set B
+A: "b\-1.out" /\e B
+
+\-\- B is the union of the files a\-1.out and a\-2.out
+B: "a\-1.out" \e/ "a\-2.out"
+
+\-\- C is the difference of the file b\-1.out and the set B
+C: "b\-1.out" \- B
+
+\-\- D is the symmetric difference of two files
+D: "a\-1.out" >< "a\-2.out"
+.fi
+.RE
+.PP
+Save this as, for example,
+.IR mydefinitions.setdown ,
+then run:
+.PP
+.RS
+.nf
+setdown \-\-input=mydefinitions.setdown
+.fi
+.RE
+.SH OUTPUT
+.B setdown
+creates an output directory next to the \fB.setdown\fR file (named
+.I output
+by default; see \fB\-\-output\fR). Each definition produces one result file in that directory,
+named after the definition with a
+.I .txt
+extension \(em a definition called
+.I Overlap
+produces
+.IR output/Overlap.txt .
+Every result file contains one element per line, sorted and de\-duplicated.
+.PP
+While evaluating sub\-expressions,
+.B setdown
+writes intermediate files to a scratch
+.I output/processing/
+subdirectory, which is removed automatically once the run finishes successfully. Pass
+\fB\-\-keep\-processing\fR to leave it in place for debugging, and \fB\-\-show\-transient\fR to
+have those intermediate results included in the summary table
+.B setdown
+prints at the end of a run.
+.SH EXIT STATUS
+.TP
+.B 0
+Success.
+.TP
+.B 1
+The file given with \fB\-\-input\fR does not exist.
+.TP
+.B 2
+More than one \fB.setdown\fR file was found in the current directory and no \fB\-\-input\fR was
+given; use \fB\-\-input\fR to select one.
+.TP
+.B 3
+No \fB.setdown\fR file was found in the current directory and no \fB\-\-input\fR was given; use
+\fB\-\-input\fR to specify one.
+.TP
+.B 11
+Two or more definitions in the file share the same name.
+.TP
+.B 12
+A definition references an identifier that has not been defined anywhere in the file.
+.TP
+.B 13
+One or more input files referenced by the definitions could not be found on disk.
+.TP
+.B 20
+A cyclic dependency was detected between two or more definitions.
+.PP
+All file paths reported in error messages are relative to the \fB.setdown\fR file, not the
+current working directory.
+.SH EXAMPLES
+Given two role files listing usernames, one per line:
+.PP
+.RS
+.nf
+$ cat admins.txt
+alice
+bob
+
+$ cat developers.txt
+bob
+carol
+.fi
+.RE
+.PP
+and a \fB.setdown\fR file:
+.PP
+.RS
+.nf
+$ cat access.setdown
+InternalStaff:   "admins.txt" \e/ "developers.txt"
+.fi
+.RE
+.PP
+running
+.B setdown
+in that directory:
+.PP
+.RS
+.nf
+$ setdown
+==> Using setdown file: access.setdown
+\&...
+$ cat output/InternalStaff.txt
+alice
+bob
+carol
+.fi
+.RE
+.PP
+produces the union of the two files, sorted and de\-duplicated, in
+.IR output/InternalStaff.txt .
+More worked examples, covering every operator and several common use cases (access control,
+API diffing, feature\-flag segmentation, dependency auditing), are distributed with the setdown
+source under
+.IR examples/ .
+.SH FILES
+.TP
+.I *.setdown
+A definitions file, as described in \fBTHE .setdown FILE FORMAT\fR above. Conventionally suffixed
+.IR .setdown ,
+though
+.B setdown
+does not require this except when auto\-detecting a file in the current directory (see
+\fB\-\-input\fR).
+.TP
+.I output/
+The default output directory; see \fBOUTPUT\fR.
+.TP
+.I output/processing/
+Scratch space for intermediate results; see \fBOUTPUT\fR and \fB\-\-keep\-processing\fR.
+.SH SEE ALSO
+The setdown source repository, including the full set of worked examples referenced above, is at
+.BR https://github.com/robertmassaioli/setdown .
+.SH AUTHOR
+Robert Massaioli <setdown@rmdir.app>
+.SH REPORTING BUGS
+Report bugs at
+.BR https://github.com/robertmassaioli/setdown/issues .
+.SH COPYRIGHT
+Copyright \(co 2015 Robert Massaioli. Licensed under the 3\-clause BSD license; see the
+.I LICENSE
+file distributed with the source for the full text.
