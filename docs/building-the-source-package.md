@@ -56,9 +56,6 @@ haskell-setdown_<version>-1.dsc
 haskell-setdown_<version>-1_source.changes
 ```
 
-Uploading them needs a `mentors.debian.net` account and `dput` configured for it — that part is
-yours to do, not something this script attempts:
-
-```shell
-dput mentors dist/source-build/haskell-setdown_<version>-1_source.changes
-```
+Uploading them is a separate, deliberately-manual step — see
+[uploading-the-source-package.md](uploading-the-source-package.md) and
+`scripts/upload-source-package.sh`.
