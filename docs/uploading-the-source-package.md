@@ -6,6 +6,10 @@ sponsor review. It's a separate script from the build, deliberately — building
 repeatable; this is the one genuinely irreversible, identity-bound step, since it posts your
 package publicly under your account.
 
+`dput` runs inside a throwaway Debian container, the same way the rest of this project's
+packaging tooling does — it isn't reliably installable on macOS, but it's a plain
+`apt install dput` on Debian.
+
 ```shell
 ./scripts/upload-source-package.sh
 ```
@@ -13,7 +17,8 @@ package publicly under your account.
 With no argument, it uploads whatever `build-source-package.sh` most recently produced (the
 newest `*_source.changes` in `dist/source-build/`). Pass a path explicitly to upload something
 else. Either way, it checks the file actually looks GPG-signed before doing anything, and asks
-you to confirm before it uploads.
+you to confirm before it uploads. Run it yourself, in a real terminal — the container runs
+interactively so `dput` can prompt you normally.
 
 ## One-time setup
 
@@ -28,27 +33,19 @@ the signature on the `.changes` file against the keys registered to accounts —
 separate username/password login for the upload itself. Make sure it's the same key you sign
 with in `build-source-package.sh` (`gpg --list-secret-keys` to check which one that is).
 
-### 2. Install `dput`
-
-`dput` isn't packaged for macOS — no Homebrew formula, no MacPorts port. The current upstream
-(`dput-ng`) is maintained on [Salsa](https://salsa.debian.org/debian/dput-ng); the plain PyPI
-`dput` package is a stale 2014 release, so install straight from source instead:
+### 2. Set up your `dput` config yourself
 
 ```shell
-pip install pipx   # if you don't already have it
-pipx install "git+https://salsa.debian.org/debian/dput-ng.git"
-pipx inject dput-ng python-debian paramiko validictory
+./scripts/upload-source-package.sh --shell
 ```
 
-If that proves fiddly (Python packaging on macOS can be), a Debian/Ubuntu VM or a Docker
-container with `dput` installed via `apt` is a reliable fallback for just this one command —
-unlike the build steps, this isn't something worth maintaining a permanent Dockerized script
-for, since it's a single one-time-per-release upload, not a repeated build.
-
-### 3. Configure `~/.dput.cf`
-
-Add this stanza (current as of mentors.debian.net's own documentation — it moved to HTTPS
-uploads a while back, not the older FTP-only flow):
+This drops you into a shell in the same container the real upload uses, with `dput`, `gnupg`,
+`nano`, and `vim-tiny` installed, and your config directory mounted as home. Create
+`~/.dput.cf` there yourself (`nano ~/.dput.cf`), or edit it directly from your host at
+`~/.config/setdown-dput/.dput.cf` — it's the same file either way, and it's yours to set up
+however you like; the upload script never writes to it itself. It persists across every future
+run, so this is a one-time step. Add this stanza (current as of mentors.debian.net's own
+documentation — it moved to HTTPS uploads a while back, not the older FTP-only flow):
 
 ```ini
 [mentors]
@@ -60,14 +57,17 @@ progress_indicator = 2
 allowed_distributions = .*
 ```
 
+`dist/source-build/` is also mounted read-only at `/upload` in this shell, in case you want to
+inspect what would be uploaded or run `dput` by hand. Exit with Ctrl-D when you're done.
+
 ## What the script checks before uploading
 
-1. `dput` is on `PATH`.
-2. `~/.dput.cf` has a `[mentors]` stanza.
-3. A `.changes` file exists — either the one you passed, or the newest one in
+1. A `.changes` file exists — either the one you passed, or the newest one in
    `dist/source-build/`.
-4. That file starts with `-----BEGIN PGP SIGNED MESSAGE-----` — catches the mistake of
+2. That file starts with `-----BEGIN PGP SIGNED MESSAGE-----` — catches the mistake of
    uploading something `build-source-package.sh` hasn't actually signed yet.
+3. `~/.config/setdown-dput/.dput.cf` has a `[mentors]` stanza (pointing you at `--shell` if
+   not).
 
 Then it prints exactly what it's about to do and asks you to confirm before running
-`dput mentors <file>`.
+`dput mentors <file>` inside the container.
