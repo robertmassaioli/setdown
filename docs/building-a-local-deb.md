@@ -7,8 +7,9 @@ Debian/Ubuntu machine without waiting on the official Debian archive (see
 where that process stands).
 
 This is for **local testing only**. It is not the same thing as the signed source package that
-eventually gets uploaded to Debian for sponsor review — that process needs your GPG key and a
-`mentors.debian.net` account, so it can't be a one-step script.
+eventually gets uploaded to Debian for sponsor review — for that, see
+[building-the-source-package.md](building-the-source-package.md) and
+`scripts/build-source-package.sh` instead.
 
 ## No GPG signing here, on purpose
 
@@ -18,11 +19,12 @@ verify who's asking to upload a package into the official archive, checked on th
 `.changes` files of a *source* upload. A local `.deb` you `apt install` and test yourself has no
 such check, so there's nothing to sign here.
 
-It also couldn't work inside this script even if it mattered: signing needs your GPG passphrase
-typed interactively into `pinentry`, which isn't available inside a non-interactive
-`docker run`. That's why signing the actual archive-upload source package is a separate, manual
-step you run yourself in a real terminal — not something this script, or any script, should try
-to automate.
+It also couldn't work inside this particular script even if it mattered: this script's whole
+build runs inside a non-interactive `docker run`, and signing needs your GPG passphrase typed
+interactively into `pinentry`, which needs a real terminal attached. That's why signing the
+actual archive-upload source package is a separate script (`build-source-package.sh`) that only
+runs its Docker build non-interactively, then signs on your host afterwards, where a real
+terminal is available.
 
 ## Prerequisites
 
