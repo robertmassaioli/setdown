@@ -99,6 +99,8 @@ library
 executable setdown
   main-is:             Main.hs
 
+  other-modules:       Paths_setdown
+
   build-depends:       base            >=4.7 && < 5
                        , setdown
                        , bytestring    >= 0.10 && < 1
@@ -153,6 +155,8 @@ test-suite setdown-golden-tests
   type:                exitcode-stdio-1.0
   main-is:             GoldenTests.hs
   hs-source-dirs:      test
+
+  other-modules:       Paths_setdown
 
   build-depends:       base            >=4.7 && < 5
                        , tasty         >= 1.4  && < 2
