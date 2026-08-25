@@ -7,9 +7,12 @@ import qualified Data.Set               as S
 
 import qualified Data.Text.Lazy         as LT
 import qualified Data.Text.Lazy.IO      as T
+import           Data.Version           (showVersion)
 import           GHC.IO.Encoding        (setLocaleEncoding, utf8)
 import           System.Console.CmdArgs
 import           System.Exit
+
+import           Paths_setdown          (version)
 
 import           Control.Exception      (finally)
 import           Control.Monad          (filterM, forM, forM_, unless, when)
@@ -89,7 +92,10 @@ options = Options
       &= help "Keep the processing/ subdirectory after the run completes instead of deleting it. Useful for inspecting intermediate files when debugging."
    }
    &= program "setdown"
-   &= summary "setdown evaluates a .setdown definitions file to perform set operations (intersection, union, difference) on line-based text files, writing one result file per definition to an output directory."
+   &= summary ("setdown " ++ showVersion version)
+   &= details
+      [ "setdown evaluates a .setdown definitions file to perform set operations (intersection, union, difference) on line-based text files, writing one result file per definition to an output directory."
+      ]
 
 data GuessError
   = NoMatchingFiles

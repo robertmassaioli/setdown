@@ -6,7 +6,10 @@ import Test.Tasty.HUnit
 import System.FilePath      ((</>))
 import System.Process       (callProcess, readProcessWithExitCode)
 import System.Exit          (ExitCode(..))
-import Data.List            (isInfixOf)
+import Data.List            (isInfixOf, isPrefixOf)
+import Data.Version         (showVersion)
+
+import Paths_setdown        (version)
 
 main :: IO ()
 main = defaultMain tests
@@ -20,6 +23,7 @@ tests = testGroup "setdown golden tests"
    , goldenTest "single-element-distinct"
    , goldenTest "single-element-identical"
    , errorDetectionTests
+   , versionTest
    ]
 
 -- | Run setdown on a fixture directory and compare the Result.txt output
@@ -48,6 +52,23 @@ goldenTest name =
 runSetdown :: FilePath -> IO ()
 runSetdown inputFile =
    callProcess "stack" ["exec", "--", "setdown", "-i", inputFile]
+
+-- ---------------------------------------------------------------------------
+-- --version
+-- ---------------------------------------------------------------------------
+
+-- | Guards against `--version` regressing back to printing the tool's
+-- description instead of an actual version number (see ai-planning/18).
+versionTest :: TestTree
+versionTest = testCase "--version prints the package version" $ do
+   (exitCode, stdout, _stderr) <- readProcessWithExitCode "stack"
+      ["exec", "--", "setdown", "--version"]
+      ""
+   let expectedPrefix = "setdown " ++ showVersion version
+   exitCode @?= ExitSuccess
+   assertBool
+      ("expected --version output to start with \"" ++ expectedPrefix ++ "\", got:\n" ++ stdout)
+      (expectedPrefix `isPrefixOf` stdout)
 
 -- ---------------------------------------------------------------------------
 -- Error detection (CLI integration)
