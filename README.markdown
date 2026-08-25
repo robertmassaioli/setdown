@@ -46,6 +46,21 @@ stack install setdown
 This works because [setdown is on Hackage][7]. To build from source instead — for example, to get
 the latest unreleased changes — see [Building the code](#building-the-code) below.
 
+### Via Homebrew (macOS/Linux)
+
+```shell
+brew tap robertmassaioli/setdown
+brew trust --tap robertmassaioli/setdown
+brew install setdown
+```
+
+Recent Homebrew versions refuse to load formulae from a third-party tap until it's explicitly
+trusted, so `brew trust` is required once per machine before the first install —
+`brew install robertmassaioli/setdown/setdown` will fail with "Refusing to load formula ... from
+untrusted tap" until you run it. See
+[github.com/robertmassaioli/homebrew-setdown](https://github.com/robertmassaioli/homebrew-setdown)
+for the formula itself.
+
 ## Quick start
 
 Every example below lives under [`examples/`](examples) in this repository — clone the repo and
