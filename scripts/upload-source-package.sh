@@ -41,14 +41,28 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 CONFIG_DIR="$HOME/.config/setdown-dput"
+CONTAINER_GNUPGHOME="$CONFIG_DIR/.gnupg"
 
 if ! command -v docker >/dev/null 2>&1; then
    echo "error: docker is required but was not found on PATH" >&2
    exit 1
 fi
+if ! command -v gpg >/dev/null 2>&1; then
+   echo "error: gpg is required (on your host, to sync your public key into the" >&2
+   echo "       container - see below) but was not found on PATH" >&2
+   exit 1
+fi
 
 mkdir -p "$CONFIG_DIR"
 mkdir -p "$REPO_ROOT/dist/source-build"
+
+# dput verifies the .changes/.dsc signature itself before uploading, so the
+# container needs your public key to check it against - not your private key,
+# which never leaves your host. Re-syncing every run is cheap and keeps this
+# working if you add or rotate keys later.
+mkdir -p "$CONTAINER_GNUPGHOME"
+chmod 700 "$CONTAINER_GNUPGHOME"
+gpg --export | gpg --homedir "$CONTAINER_GNUPGHOME" --import --quiet 2>/dev/null || true
 
 if [ "${1:-}" = "--shell" ]; then
    echo "==> Dropping into a shell with dput installed."
@@ -87,6 +101,15 @@ fi
 if ! head -n1 "$CHANGES" | grep -q '^-----BEGIN PGP SIGNED MESSAGE-----'; then
    echo "error: $CHANGES does not look like it's been GPG-signed." >&2
    echo "       Run scripts/build-source-package.sh, which signs it as its last step." >&2
+   exit 1
+fi
+
+if grep -q '^Distribution: UNRELEASED$' "$CHANGES"; then
+   echo "error: $CHANGES targets distribution UNRELEASED, which mentors.debian.net" >&2
+   echo "       refuses to accept - that's a local-development placeholder, not a real" >&2
+   echo "       upload target. Change the distribution in debian/changelog's latest" >&2
+   echo "       entry (e.g. to 'unstable' for a new package's first upload), then" >&2
+   echo "       rebuild with scripts/build-source-package.sh." >&2
    exit 1
 fi
 
