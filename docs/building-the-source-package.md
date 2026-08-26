@@ -32,6 +32,8 @@ GPG default signing key otherwise.
 - `debian/changelog`'s latest entry must already reference the same version as
   `setdown.cabal` — the script checks this and fails fast if they've drifted apart, rather than
   building something inconsistent.
+- For an actual upload (not just a local test build), `debian/changelog`'s latest entry needs a
+  real target distribution, not `UNRELEASED` — see "Before a real upload" below.
 
 ## What it does
 
@@ -41,11 +43,30 @@ GPG default signing key otherwise.
    (gitignored).
 3. Unpacks it and overlays this repository's `debian/` directory on top — the same layout the
    Debian Haskell Group's own tooling uses.
-4. Builds the **unsigned** source package (`dpkg-buildpackage -S -us -uc`) inside a throwaway
-   `debian:trixie` container, then runs `lintian --pedantic` against it.
-5. Signs the resulting `.dsc` and `.changes` **on your host**, not inside the container —
-   `gpg --clearsign`, in place, exactly what `debsign` does under the hood. This is the step
-   that prompts you interactively.
+4. Builds the **unsigned** `.dsc` (`dpkg-source -b .`) inside a throwaway `debian:trixie`
+   container.
+5. Signs the `.dsc` **on your host**, not inside the container — `gpg --clearsign`, in place.
+   This is the step that prompts you interactively.
+6. Generates `.changes` (`dpkg-genchanges`) against the now-*signed* `.dsc`, in a fresh
+   container, then runs `lintian --pedantic` against it.
+7. Signs `.changes` on your host the same way.
+
+Steps 4–7 are deliberately split around the signing step, rather than building both files and
+signing them afterwards. A `.changes` file embeds a checksum *of the `.dsc` file itself*,
+computed at the moment `.changes` is generated — signing the `.dsc` changes its bytes (adds the
+PGP armor), so if `.changes` were generated first and the `.dsc` signed afterwards, that
+embedded checksum goes stale and `dput` refuses the upload outright with a
+"Checksum doesn't match" error. Signing the `.dsc` before generating `.changes` is how
+`dpkg-buildpackage` avoids this itself when it does the signing in one pass; this reproduces
+that order by hand since signing has to happen on the host, not inside the build container.
+
+## Before a real upload
+
+`debian/changelog`'s latest entry should currently say `UNRELEASED` as its distribution — that's
+the correct state while iterating locally, and `upload-source-package.sh` will refuse to upload
+a package built against it (mentors.debian.net rejects `UNRELEASED` outright; it's a
+local-development placeholder, not a real upload target). Before your first real upload, change
+it to the real target — `unstable`, for a new package's first upload — and rebuild.
 
 ## After it finishes
 

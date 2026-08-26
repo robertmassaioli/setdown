@@ -66,7 +66,10 @@ inspect what would be uploaded or run `dput` by hand. Exit with Ctrl-D when you'
    `dist/source-build/`.
 2. That file starts with `-----BEGIN PGP SIGNED MESSAGE-----` — catches the mistake of
    uploading something `build-source-package.sh` hasn't actually signed yet.
-3. `~/.config/setdown-dput/.dput.cf` has a `[mentors]` stanza (pointing you at `--shell` if
+3. It doesn't target distribution `UNRELEASED` — mentors.debian.net rejects that outright (see
+   [building-the-source-package.md](building-the-source-package.md#before-a-real-upload)); this
+   just gives a clearer error than `dput`'s own Python traceback would.
+4. `~/.config/setdown-dput/.dput.cf` has a `[mentors]` stanza (pointing you at `--shell` if
    not).
 
 Then it prints exactly what it's about to do and asks you to confirm before running
