@@ -5,6 +5,13 @@ DEB_SETUP_BIN_NAME = debian/hlibrary.setup
 DEB_CABAL_PACKAGE = setdown
 DEB_DEFAULT_COMPILER = ghc
 
+# The setdown-golden-tests suite drives the real setdown executable as a
+# subprocess (see test/GoldenTests.hs). Outside a stack project -- which is
+# what this build is -- there is no `stack` binary to fall back on, so point
+# it at the executable this build just produced instead. This path matches
+# debian/setdown.install, which packages the same binary.
+export SETDOWN_BIN = $(CURDIR)/dist-ghc/build/setdown/setdown
+
 include /usr/share/cdbs/1/rules/debhelper.mk
 include /usr/share/cdbs/1/class/hlibrary.mk
 

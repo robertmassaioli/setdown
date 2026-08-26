@@ -6,6 +6,11 @@ gap identified below was resolved by implementing
 [15-reimplement-table-layout.md](15-reimplement-table-layout.md) (merged — see status note
 below). [16-bundle-table-layout.md](16-bundle-table-layout.md) covers the vendoring alternative
 that was considered and not taken.
+[17-github-release-deb-packaging.md](17-github-release-deb-packaging.md) proposes a new **Track
+D**: building the `debian/` directory below on a GitHub-hosted runner and attaching the resulting
+`.deb` to GitHub Releases — distinct from Track C (static-binary, no distro toolchain) below,
+since Track D reuses Track A/B's distro-integrated `debian/` build as-is and just changes where
+the result is distributed.
 
 **Decision:** setdown ships as an **executable-only** Debian package (plain `setdown`, no
 `libghc-setdown-dev`). See "Naming convention" and "Open questions" below.

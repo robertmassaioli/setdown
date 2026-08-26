@@ -1,0 +1,121 @@
+name: Release .deb
+
+# Builds the debian/ package (see ai-planning/17-github-release-deb-packaging.md)
+# on GitHub-hosted Ubuntu runners and attaches the result to a GitHub Release.
+#
+# - Push a `v*` tag to build, create/update the matching GitHub Release, and
+#   upload the .deb assets to it.
+# - Run manually (workflow_dispatch) to build and lint without publishing
+#   anything -- the only way to exercise this workflow without cutting a
+#   real release, since it can't be tested locally (dpkg-buildpackage needs
+#   a Debian/Ubuntu host).
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch: {}
+
+permissions:
+  contents: write
+
+jobs:
+  prepare:
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Verify setdown.cabal and debian/changelog agree on version
+        run: |
+          CABAL_VERSION=$(grep -m1 '^version:' setdown.cabal | awk '{print $2}')
+          CHANGELOG_VERSION=$(head -n1 debian/changelog | sed 's/.*(\(.*\)).*/\1/' | sed 's/-.*//')
+          echo "setdown.cabal version:    $CABAL_VERSION"
+          echo "debian/changelog version: $CHANGELOG_VERSION"
+          if [ "$CABAL_VERSION" != "$CHANGELOG_VERSION" ]; then
+            echo "::error::setdown.cabal version ($CABAL_VERSION) does not match debian/changelog version ($CHANGELOG_VERSION)"
+            exit 1
+          fi
+
+      - name: Verify the pushed tag matches the package version
+        if: github.ref_type == 'tag'
+        run: |
+          CABAL_VERSION=$(grep -m1 '^version:' setdown.cabal | awk '{print $2}')
+          TAG_VERSION="${GITHUB_REF_NAME#v}"
+          if [ "$TAG_VERSION" != "$CABAL_VERSION" ]; then
+            echo "::error::tag $GITHUB_REF_NAME does not match setdown.cabal version ($CABAL_VERSION)"
+            exit 1
+          fi
+
+      # Created once here, ahead of the build matrix, so two matrix legs
+      # racing on `gh release create` can't fail one of them.
+      - name: Create the GitHub Release if it doesn't already exist
+        if: github.ref_type == 'tag'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if ! gh release view "$GITHUB_REF_NAME" >/dev/null 2>&1; then
+            gh release create "$GITHUB_REF_NAME" --title "$GITHUB_REF_NAME" --generate-notes
+          fi
+
+  build:
+    needs: prepare
+    strategy:
+      fail-fast: true
+      matrix:
+        include:
+          - runner: ubuntu-24.04
+            arch: amd64
+          - runner: ubuntu-24.04-arm
+            arch: arm64
+    runs-on: ${{ matrix.runner }}
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      # mk-build-deps reads debian/control's Build-Depends directly (installing
+      # a throwaway dummy package that pulls them in via apt), rather than
+      # hand-copying that list here where it could silently drift out of sync.
+      # Only devscripts/equivs/lintian itself need naming explicitly, since
+      # they're tools this workflow uses but debian/control has no reason to
+      # depend on. Verified against Ubuntu noble's amd64 universe archive
+      # before this workflow was written (see ai-planning/17); the arm64 leg
+      # is unverified until this workflow actually runs.
+      - name: Install the Debian/Haskell packaging toolchain
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y devscripts equivs lintian
+          sudo mk-build-deps -i -r -t 'apt-get -y --no-install-recommends' debian/control
+
+      - name: Build the .deb (dpkg-buildpackage runs the test suites)
+        run: dpkg-buildpackage -us -uc -b
+
+      # First pass: report only. debian/ as committed already carries at
+      # least one known lintian tag (debian/compat is the deprecated
+      # mechanism; a modern package would use debhelper-compat instead), so
+      # this is intentionally non-blocking until the real tag list from a
+      # successful run informs a proper pass/fail policy.
+      - name: Lint the package (informational only for now)
+        run: lintian ../*.deb || true
+
+      - name: Collect build output
+        run: |
+          mkdir -p dist-deb
+          mv ../setdown_*.deb dist-deb/
+          # An unversioned alias per architecture, so
+          # releases/latest/download/setdown_<arch>.deb is a stable link
+          # regardless of version -- the versioned filename dpkg-buildpackage
+          # produces isn't guessable without already knowing the version.
+          cp dist-deb/setdown_*_${{ matrix.arch }}.deb "dist-deb/setdown_${{ matrix.arch }}.deb"
+
+      - name: Upload workflow artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: setdown-deb-${{ matrix.arch }}
+          path: dist-deb/*.deb
+
+      - name: Upload release assets
+        if: github.ref_type == 'tag'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release upload "$GITHUB_REF_NAME" dist-deb/*.deb --clobber
