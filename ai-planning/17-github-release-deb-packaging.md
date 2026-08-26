@@ -14,6 +14,22 @@ the result via GitHub Releases instead of an archive or PPA.
 building it on GitHub-hosted Ubuntu runners with `apt`-installed Haskell packaging tools, rather
 than hand-rolling a second, parallel packaging path with `fpm`/`dpkg-deb`.
 
+**Status update (2026-08-26):** implemented in PR #16 — `.github/workflows/release-deb.yml`
+(Approach A, matrix over `ubuntu-24.04`/`ubuntu-24.04-arm`), the `test/GoldenTests.hs` fix for the
+`stack`-invocation blocker (a `SETDOWN_BIN` environment variable override, wired up in
+`debian/rules`), and the tag/`setdown.cabal`/`debian/changelog` version consistency checks. The
+README `.deb` install instructions are deliberately **not** included yet — they'd document a URL
+that 404s until a release actually carries that asset (see the README work item below).
+
+The workflow itself is **unexecuted**. It can't be built locally (`dpkg-buildpackage` needs a
+Debian/Ubuntu host, not macOS) or exercised from this branch — GitHub only offers
+`workflow_dispatch` for workflows present on a repository's **default branch**, so the intended
+sequence is: merge this PR to `main` → run the workflow manually via `workflow_dispatch` (build +
+lint, no publish) → fix whatever that run surfaces → only then push a real `v*` tag. The apt
+install step now reads `debian/control`'s `Build-Depends` directly via `mk-build-deps` rather than
+a hand-copied package list, so the amd64/arm64 dependency-availability question above is answered
+by apt itself on that first run, not by a separately maintained list here.
+
 ---
 
 ## Problem

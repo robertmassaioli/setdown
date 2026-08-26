@@ -6,6 +6,7 @@ import Test.Tasty.HUnit
 import System.FilePath      ((</>))
 import System.Process       (callProcess, readProcessWithExitCode)
 import System.Exit          (ExitCode(..))
+import System.Environment   (lookupEnv)
 import Data.List            (isInfixOf, isPrefixOf)
 import Data.Version         (showVersion)
 
@@ -50,8 +51,23 @@ goldenTest name =
       fixtureDir = "test" </> "golden" </> name
 
 runSetdown :: FilePath -> IO ()
-runSetdown inputFile =
-   callProcess "stack" ["exec", "--", "setdown", "-i", inputFile]
+runSetdown inputFile = do
+   (cmd, baseArgs) <- setdownCommand
+   callProcess cmd (baseArgs ++ ["-i", inputFile])
+
+-- | How to invoke the setdown executable under test.
+--
+-- Defaults to @stack exec -- setdown@, matching how @stack test@ runs this
+-- suite in CI. Set @SETDOWN_BIN@ to the path of an already-built executable
+-- to bypass stack entirely -- needed when this suite runs outside a stack
+-- project, e.g. under a plain @dpkg-buildpackage@/cabal build, which has no
+-- @stack@ binary on PATH at all.
+setdownCommand :: IO (FilePath, [String])
+setdownCommand = do
+   override <- lookupEnv "SETDOWN_BIN"
+   pure $ case override of
+      Just bin -> (bin, [])
+      Nothing  -> ("stack", ["exec", "--", "setdown"])
 
 -- ---------------------------------------------------------------------------
 -- --version
@@ -61,8 +77,9 @@ runSetdown inputFile =
 -- description instead of an actual version number (see ai-planning/18).
 versionTest :: TestTree
 versionTest = testCase "--version prints the package version" $ do
-   (exitCode, stdout, _stderr) <- readProcessWithExitCode "stack"
-      ["exec", "--", "setdown", "--version"]
+   (cmd, baseArgs) <- setdownCommand
+   (exitCode, stdout, _stderr) <- readProcessWithExitCode cmd
+      (baseArgs ++ ["--version"])
       ""
    let expectedPrefix = "setdown " ++ showVersion version
    exitCode @?= ExitSuccess
@@ -88,8 +105,9 @@ errorDetectionTests = testGroup "error detection"
 errorTest :: String -> Int -> String -> TestTree
 errorTest name expectedCode expectedFragment =
    testCase name $ do
-      (exitCode, stdout, _stderr) <- readProcessWithExitCode "stack"
-         ["exec", "--", "setdown", "-i", fixtureDir </> "example.setdown"]
+      (cmd, baseArgs) <- setdownCommand
+      (exitCode, stdout, _stderr) <- readProcessWithExitCode cmd
+         (baseArgs ++ ["-i", fixtureDir </> "example.setdown"])
          ""
       exitCode @?= ExitFailure expectedCode
       assertBool
