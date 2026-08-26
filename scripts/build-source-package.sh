@@ -80,36 +80,45 @@ tar xzf "$ORIG_TARBALL" -C "$BUILD_DIR"
 mv "$BUILD_DIR/setdown-${VERSION}" "$SRC_DIR"
 cp -R "$REPO_ROOT/debian" "$SRC_DIR/debian"
 
-echo "==> Building the unsigned source package in a Debian trixie container..."
+TOOLCHAIN='ghc haskell-devscripts debhelper cdbs lintian devscripts dpkg-dev build-essential \
+   alex happy libghc-cmdargs-dev libghc-uuid-dev libghc-split-dev libghc-async-dev \
+   libghc-quickcheck2-dev libghc-tasty-dev libghc-tasty-golden-dev libghc-tasty-hunit-dev \
+   libghc-tasty-quickcheck-dev'
+
+# Building the .dsc and building the .changes are split into two separate
+# container runs, with the .dsc signed on the host in between - on purpose.
+# A .changes file embeds a checksum *of the .dsc itself*, computed at the
+# moment .changes is generated. Signing the .dsc wraps it in PGP armor,
+# which changes its bytes - so if .changes were generated first and the
+# .dsc signed afterwards (the obvious, simpler order, and the one this
+# script used to use), .changes' own checksum for the .dsc goes stale and
+# dput refuses the upload outright ("Checksum doesn't match"). Signing
+# first, then generating .changes from the already-signed .dsc, is how the
+# real dpkg-buildpackage avoids this when it does the signing itself; this
+# reproduces that order by hand since signing needs to happen on the host.
+
+echo "==> Building the unsigned .dsc in a Debian trixie container..."
 docker run --rm \
    -v "$BUILD_DIR:/build" \
    -w "/build/haskell-setdown-${VERSION}" \
    debian:trixie \
-   bash -eu -o pipefail -c '
+   bash -eu -o pipefail -c "
       export DEBIAN_FRONTEND=noninteractive
       apt-get update -qq
-      apt-get install -y -qq \
-         ghc haskell-devscripts debhelper cdbs lintian devscripts \
-         dpkg-dev build-essential alex happy \
-         libghc-cmdargs-dev libghc-uuid-dev libghc-split-dev libghc-async-dev \
-         libghc-quickcheck2-dev libghc-tasty-dev libghc-tasty-golden-dev \
-         libghc-tasty-hunit-dev libghc-tasty-quickcheck-dev
+      apt-get install -y -qq $TOOLCHAIN
 
-      dpkg-buildpackage -S -us -uc
-
-      echo "==> lintian:"
-      lintian --pedantic ../*_source.changes || true
-   '
+      dpkg-source --before-build .
+      debian/rules clean
+      dpkg-source -b .
+   "
 
 DSC="$BUILD_DIR/haskell-setdown_${VERSION}-1.dsc"
 CHANGES="$BUILD_DIR/haskell-setdown_${VERSION}-1_source.changes"
 
 echo
-echo "==> Unsigned source package built:"
-ls -1 "$DSC" "$CHANGES"
-
+echo "==> Unsigned .dsc built: $DSC"
 echo
-echo "==> Signing with GPG - you may be prompted for your passphrase now."
+echo "==> Signing the .dsc with GPG - you may be prompted for your passphrase now."
 
 GPG_ARGS=()
 if [ -n "$KEY" ]; then
@@ -119,6 +128,28 @@ fi
 gpg "${GPG_ARGS[@]}" --clearsign --output "$DSC.signed" "$DSC"
 mv "$DSC.signed" "$DSC"
 
+echo
+echo "==> Generating .changes against the signed .dsc, in a fresh container..."
+docker run --rm \
+   -v "$BUILD_DIR:/build" \
+   -w "/build/haskell-setdown-${VERSION}" \
+   debian:trixie \
+   bash -eu -o pipefail -c "
+      export DEBIAN_FRONTEND=noninteractive
+      apt-get update -qq
+      apt-get install -y -qq $TOOLCHAIN
+
+      dpkg-genbuildinfo --build=source -O../haskell-setdown_${VERSION}-1_source.buildinfo
+      dpkg-genchanges --build=source -O../haskell-setdown_${VERSION}-1_source.changes
+      dpkg-source --after-build .
+
+      echo '==> lintian:'
+      lintian --pedantic ../*_source.changes || true
+   "
+
+echo
+echo "==> Signing the .changes with GPG - you may be prompted for your passphrase again."
+
 gpg "${GPG_ARGS[@]}" --clearsign --output "$CHANGES.signed" "$CHANGES"
 mv "$CHANGES.signed" "$CHANGES"
 
@@ -127,5 +158,5 @@ echo "==> Done. Signed and ready to upload:"
 echo "  $DSC"
 echo "  $CHANGES"
 echo
-echo "Upload with (needs a mentors.debian.net account and dput configured for it):"
-echo "  dput mentors $CHANGES"
+echo "Upload with (see docs/uploading-the-source-package.md for one-time setup):"
+echo "  ./scripts/upload-source-package.sh"
